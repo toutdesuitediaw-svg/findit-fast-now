@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { MapPin, Rocket, Search, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -5,6 +7,13 @@ import heroBg from "@/assets/hero-bg.jpg";
 import Logo from "./Logo";
 
 const Hero = () => {
+  const navigate = useNavigate();
+  const [q, setQ] = useState("");
+  const onSearch = () => {
+    const params = new URLSearchParams();
+    if (q.trim()) params.set("q", q.trim());
+    navigate(`/annonces?${params.toString()}`);
+  };
   return (
     <section className="relative overflow-hidden bg-gradient-hero">
       {/* Glow background */}
