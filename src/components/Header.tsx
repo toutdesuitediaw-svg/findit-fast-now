@@ -1,19 +1,27 @@
 import { useState } from "react";
-import { ChevronDown, Menu, Plus, User, X } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { LayoutDashboard, LogOut, Menu, Plus, User, X } from "lucide-react";
 import Logo from "./Logo";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 const navItems = [
-  { label: "Accueil", href: "#", active: true },
-  { label: "Catégories", href: "#categories", hasDropdown: true },
-  { label: "Publier une annonce", href: "#publier" },
-  { label: "Annonces Premium", href: "#premium" },
-  { label: "Blog", href: "#blog" },
-  { label: "Contact", href: "#contact" },
+  { label: "Accueil", to: "/" },
+  { label: "Annonces", to: "/annonces" },
+  { label: "Annonces Premium", to: "/annonces?sort=premium" },
+  { label: "Contact", to: "/#contact" },
 ];
 
 const Header = () => {
   const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
+  const { user, signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/80 backdrop-blur-xl">
@@ -22,28 +30,41 @@ const Header = () => {
 
         <nav className="hidden lg:flex items-center gap-7">
           {navItems.map((item) => (
-            <a
+            <Link
               key={item.label}
-              href={item.href}
-              className={`relative text-sm font-medium transition-colors hover:text-primary flex items-center gap-1 ${
-                item.active ? "text-primary" : "text-foreground/85"
-              }`}
+              to={item.to}
+              className="text-sm font-medium transition-colors hover:text-primary text-foreground/85"
             >
               {item.label}
-              {item.hasDropdown && <ChevronDown className="w-3.5 h-3.5" />}
-              {item.active && (
-                <span className="absolute -bottom-1.5 left-0 right-0 h-0.5 bg-gradient-gold rounded-full" />
-              )}
-            </a>
+            </Link>
           ))}
         </nav>
 
         <div className="hidden md:flex items-center gap-3">
-          <Button variant="outlineGold" size="default">
-            <User className="w-4 h-4" />
-            Se connecter
-          </Button>
-          <Button variant="gold" size="default">
+          {user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outlineGold">
+                  <User className="w-4 h-4" />
+                  Mon compte
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={() => navigate("/dashboard")}>
+                  <LayoutDashboard className="w-4 h-4 mr-2" /> Tableau de bord
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleSignOut}>
+                  <LogOut className="w-4 h-4 mr-2" /> Déconnexion
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Button variant="outlineGold" onClick={() => navigate("/auth")}>
+              <User className="w-4 h-4" />
+              Se connecter
+            </Button>
+          )}
+          <Button variant="gold" onClick={() => navigate(user ? "/publier" : "/auth")}>
             Publier une annonce
             <Plus className="w-4 h-4" />
           </Button>
@@ -62,20 +83,28 @@ const Header = () => {
         <div className="lg:hidden border-t border-border/50 bg-background/95 backdrop-blur-xl">
           <div className="container mx-auto py-4 flex flex-col gap-3">
             {navItems.map((item) => (
-              <a
+              <Link
                 key={item.label}
-                href={item.href}
+                to={item.to}
                 onClick={() => setOpen(false)}
-                className={`text-sm font-medium py-2 ${
-                  item.active ? "text-primary" : "text-foreground/85"
-                }`}
+                className="text-sm font-medium py-2 text-foreground/85"
               >
                 {item.label}
-              </a>
+              </Link>
             ))}
             <div className="flex flex-col gap-2 pt-2">
-              <Button variant="outlineGold">Se connecter</Button>
-              <Button variant="gold">Publier une annonce</Button>
+              {user ? (
+                <>
+                  <Button variant="outlineGold" onClick={() => { navigate("/dashboard"); setOpen(false); }}>Tableau de bord</Button>
+                  <Button variant="gold" onClick={() => { navigate("/publier"); setOpen(false); }}>Publier une annonce</Button>
+                  <Button variant="ghost" onClick={handleSignOut}>Déconnexion</Button>
+                </>
+              ) : (
+                <>
+                  <Button variant="outlineGold" onClick={() => { navigate("/auth"); setOpen(false); }}>Se connecter</Button>
+                  <Button variant="gold" onClick={() => { navigate("/auth"); setOpen(false); }}>Publier une annonce</Button>
+                </>
+              )}
             </div>
           </div>
         </div>

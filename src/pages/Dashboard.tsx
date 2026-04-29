@@ -1,0 +1,173 @@
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Heart, Loader2, LogOut, Plus, Trash2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import { toast } from "sonner";
+
+interface Listing {
+  id: string;
+  title: string;
+  price: number | null;
+  currency: string;
+  location: string | null;
+  images: string[];
+  is_active: boolean;
+  is_premium: boolean;
+}
+
+const Dashboard = () => {
+  const navigate = useNavigate();
+  const { user, loading, signOut } = useAuth();
+  const [myListings, setMyListings] = useState<Listing[]>([]);
+  const [favorites, setFavorites] = useState<Listing[]>([]);
+  const [profile, setProfile] = useState<{ display_name: string | null } | null>(null);
+  const [busy, setBusy] = useState(true);
+
+  useEffect(() => {
+    if (!loading && !user) navigate("/auth", { replace: true });
+  }, [user, loading, navigate]);
+
+  useEffect(() => {
+    if (!user) return;
+    const load = async () => {
+      setBusy(true);
+      const [{ data: l }, { data: f }, { data: p }] = await Promise.all([
+        supabase.from("listings").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+        supabase.from("favorites").select("listing:listings(*)").eq("user_id", user.id),
+        supabase.from("profiles").select("display_name").eq("id", user.id).maybeSingle(),
+      ]);
+      setMyListings((l ?? []) as Listing[]);
+      setFavorites(((f ?? []).map((x: any) => x.listing).filter(Boolean)) as Listing[]);
+      setProfile(p);
+      setBusy(false);
+    };
+    load();
+  }, [user]);
+
+  const deleteListing = async (id: string) => {
+    if (!confirm("Supprimer cette annonce ?")) return;
+    const { error } = await supabase.from("listings").delete().eq("id", id);
+    if (error) return toast.error(error.message);
+    setMyListings((prev) => prev.filter((l) => l.id !== id));
+    toast.success("Annonce supprimée");
+  };
+
+  const removeFavorite = async (listingId: string) => {
+    if (!user) return;
+    await supabase.from("favorites").delete().eq("user_id", user.id).eq("listing_id", listingId);
+    setFavorites((prev) => prev.filter((l) => l.id !== listingId));
+  };
+
+  if (loading || !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  const formatPrice = (l: Listing) =>
+    l.price ? `${Number(l.price).toLocaleString("fr-FR")} ${l.currency}` : "À discuter";
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col">
+      <Header />
+      <main className="flex-1 container mx-auto px-4 py-10">
+        <div className="flex flex-wrap items-end justify-between gap-4 mb-8">
+          <div>
+            <h1 className="font-display text-3xl md:text-4xl font-bold">
+              Bonjour, <span className="text-gradient-gold">{profile?.display_name ?? user.email}</span>
+            </h1>
+            <p className="text-muted-foreground mt-1">Gérez vos annonces et vos favoris</p>
+          </div>
+          <div className="flex gap-3">
+            <Button variant="gold" onClick={() => navigate("/publier")}>
+              <Plus className="w-4 h-4" /> Publier une annonce
+            </Button>
+            <Button variant="outlineGold" onClick={async () => { await signOut(); navigate("/"); }}>
+              <LogOut className="w-4 h-4" /> Déconnexion
+            </Button>
+          </div>
+        </div>
+
+        <Tabs defaultValue="listings">
+          <TabsList>
+            <TabsTrigger value="listings">Mes annonces ({myListings.length})</TabsTrigger>
+            <TabsTrigger value="favorites">Favoris ({favorites.length})</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="listings" className="mt-6">
+            {busy ? (
+              <div className="flex justify-center py-12"><Loader2 className="animate-spin text-primary" /></div>
+            ) : myListings.length === 0 ? (
+              <EmptyState message="Aucune annonce publiée" cta="Publier ma première annonce" onCta={() => navigate("/publier")} />
+            ) : (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {myListings.map((l) => (
+                  <article key={l.id} className="rounded-2xl bg-card border border-border overflow-hidden">
+                    <div className="aspect-[4/3] bg-secondary overflow-hidden">
+                      {l.images[0] ? (
+                        <img src={l.images[0]} alt={l.title} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">Pas de photo</div>
+                      )}
+                    </div>
+                    <div className="p-4 space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="font-semibold line-clamp-1">{l.title}</h3>
+                        {l.is_premium && <span className="text-[10px] font-bold bg-gradient-gold text-primary-foreground px-2 py-0.5 rounded">PREMIUM</span>}
+                      </div>
+                      <p className="text-xs text-muted-foreground">{l.location ?? "—"}</p>
+                      <p className="font-bold text-primary">{formatPrice(l)}</p>
+                      <Button variant="ghost" size="sm" onClick={() => deleteListing(l.id)} className="text-destructive hover:text-destructive">
+                        <Trash2 className="w-4 h-4" /> Supprimer
+                      </Button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="favorites" className="mt-6">
+            {favorites.length === 0 ? (
+              <EmptyState message="Aucune annonce en favoris" cta="Parcourir les annonces" onCta={() => navigate("/")} />
+            ) : (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {favorites.map((l) => (
+                  <article key={l.id} className="rounded-2xl bg-card border border-border overflow-hidden">
+                    <div className="aspect-[4/3] bg-secondary overflow-hidden cursor-pointer" onClick={() => navigate(`/annonce/${l.id}`)}>
+                      {l.images[0] && <img src={l.images[0]} alt={l.title} className="w-full h-full object-cover" />}
+                    </div>
+                    <div className="p-4 space-y-2">
+                      <h3 className="font-semibold line-clamp-1">{l.title}</h3>
+                      <p className="font-bold text-primary">{formatPrice(l)}</p>
+                      <Button variant="ghost" size="sm" onClick={() => removeFavorite(l.id)}>
+                        <Heart className="w-4 h-4 fill-primary text-primary" /> Retirer
+                      </Button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+      </main>
+      <Footer />
+    </div>
+  );
+};
+
+const EmptyState = ({ message, cta, onCta }: { message: string; cta: string; onCta: () => void }) => (
+  <div className="text-center py-16 border border-dashed border-border rounded-2xl">
+    <p className="text-muted-foreground mb-4">{message}</p>
+    <Button variant="gold" onClick={onCta}>{cta}</Button>
+  </div>
+);
+
+export default Dashboard;

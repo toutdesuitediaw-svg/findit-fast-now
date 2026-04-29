@@ -1,21 +1,22 @@
+import { Link } from "react-router-dom";
 import { Briefcase, Car, Home, MoreHorizontal, ShoppingBag, Smartphone } from "lucide-react";
 
 const categories = [
-  { icon: Home, label: "Immobilier", desc: "Maisons, Appartements, Terrains..." },
-  { icon: Car, label: "Véhicules", desc: "Voitures, Motos, Camions..." },
-  { icon: Smartphone, label: "Électronique", desc: "Téléphones, Ordinateurs, Accessoires..." },
-  { icon: Briefcase, label: "Emploi", desc: "Offres d'emploi, Recrutement..." },
-  { icon: ShoppingBag, label: "Mode & Beauté", desc: "Vêtements, Chaussures, Parfums..." },
-  { icon: MoreHorizontal, label: "Divers", desc: "Maison, Services, Autres..." },
+  { icon: Home, label: "Immobilier", desc: "Maisons, Appartements, Terrains...", slug: "immobilier" },
+  { icon: Car, label: "Véhicules", desc: "Voitures, Motos, Camions...", slug: "vehicules" },
+  { icon: Smartphone, label: "Électronique", desc: "Téléphones, Ordinateurs, Accessoires...", slug: "electronique" },
+  { icon: Briefcase, label: "Emploi", desc: "Offres d'emploi, Recrutement...", slug: "emploi" },
+  { icon: ShoppingBag, label: "Mode & Beauté", desc: "Vêtements, Chaussures, Parfums...", slug: "mode-beaute" },
+  { icon: MoreHorizontal, label: "Divers", desc: "Maison, Services, Autres...", slug: "divers" },
 ];
 
 const Categories = () => {
   return (
     <section id="categories" className="container mx-auto px-4 py-12 md:py-16">
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        {categories.map(({ icon: Icon, label, desc }) => (
-          <a
-            href="#"
+        {categories.map(({ icon: Icon, label, desc, slug }) => (
+          <Link
+            to={`/annonces?cat=${slug}`}
             key={label}
             className="group relative flex flex-col items-center text-center p-5 rounded-2xl bg-card/40 border border-border/50 hover:border-primary/50 hover:bg-card transition-all duration-300 hover:-translate-y-1"
           >
@@ -24,7 +25,7 @@ const Categories = () => {
             </div>
             <h3 className="font-semibold text-sm text-foreground">{label}</h3>
             <p className="text-xs text-muted-foreground mt-1 leading-snug">{desc}</p>
-          </a>
+          </Link>
         ))}
       </div>
     </section>
