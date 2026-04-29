@@ -14,7 +14,163 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          name: string
+          slug: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name: string
+          slug: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name?: string
+          slug?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      favorites: {
+        Row: {
+          created_at: string
+          id: string
+          listing_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          listing_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          listing_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "favorites_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      listings: {
+        Row: {
+          category_id: string | null
+          created_at: string
+          currency: string
+          description: string
+          id: string
+          images: string[]
+          is_active: boolean
+          is_premium: boolean
+          location: string | null
+          price: number | null
+          price_type: string | null
+          title: string
+          updated_at: string
+          user_id: string
+          views_count: number
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string
+          currency?: string
+          description: string
+          id?: string
+          images?: string[]
+          is_active?: boolean
+          is_premium?: boolean
+          location?: string | null
+          price?: number | null
+          price_type?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+          views_count?: number
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string
+          currency?: string
+          description?: string
+          id?: string
+          images?: string[]
+          is_active?: boolean
+          is_premium?: boolean
+          location?: string | null
+          price?: number | null
+          price_type?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+          views_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listings_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          account_type: Database["public"]["Enums"]["account_type"]
+          avatar_url: string | null
+          city: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          phone: string | null
+          updated_at: string
+          whatsapp: string | null
+        }
+        Insert: {
+          account_type?: Database["public"]["Enums"]["account_type"]
+          avatar_url?: string | null
+          city?: string | null
+          created_at?: string
+          display_name?: string | null
+          id: string
+          phone?: string | null
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Update: {
+          account_type?: Database["public"]["Enums"]["account_type"]
+          avatar_url?: string | null
+          city?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          phone?: string | null
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +179,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      account_type: "particulier" | "professionnel"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +306,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      account_type: ["particulier", "professionnel"],
+    },
   },
 } as const
