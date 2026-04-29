@@ -100,19 +100,22 @@ const Hero = () => {
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") onSearch(); }}
                   placeholder="Que recherchez-vous ?"
                   className="pl-11 h-14 bg-transparent border-0 focus-visible:ring-0 text-base placeholder:text-muted-foreground"
                 />
               </div>
-              <button className="flex items-center gap-2 px-4 h-14 rounded-lg bg-secondary/60 hover:bg-secondary text-left text-sm transition-colors">
+              <button onClick={() => navigate("/annonces")} className="flex items-center gap-2 px-4 h-14 rounded-lg bg-secondary/60 hover:bg-secondary text-left text-sm transition-colors">
                 <span className="flex-1 text-muted-foreground">Toutes catégories</span>
                 <span className="text-primary">▾</span>
               </button>
-              <button className="flex items-center gap-2 px-4 h-14 rounded-lg bg-secondary/60 hover:bg-secondary text-left text-sm transition-colors">
+              <button onClick={() => navigate("/annonces")} className="flex items-center gap-2 px-4 h-14 rounded-lg bg-secondary/60 hover:bg-secondary text-left text-sm transition-colors">
                 <MapPin className="w-4 h-4 text-primary" />
                 <span className="flex-1 text-muted-foreground">Toutes les localités</span>
               </button>
-              <Button variant="gold" className="h-14 px-8 text-base">
+              <Button variant="gold" onClick={onSearch} className="h-14 px-8 text-base">
                 <Search className="w-5 h-5" />
                 Rechercher
               </Button>
