@@ -6,29 +6,29 @@
 
 @layer base {
   :root {
-    /* Black & Gold luxury theme */
-    --background: 0 0% 4%;
-    --foreground: 45 30% 96%;
+    /* Black & Gold luxury theme - refined */
+    --background: 0 0% 3%;
+    --foreground: 45 25% 97%;
 
-    --card: 0 0% 7%;
-    --card-foreground: 45 30% 96%;
+    --card: 0 0% 6%;
+    --card-foreground: 45 25% 97%;
 
-    --popover: 0 0% 7%;
-    --popover-foreground: 45 30% 96%;
+    --popover: 0 0% 6%;
+    --popover-foreground: 45 25% 97%;
 
-    /* Gold */
-    --primary: 43 74% 56%;
-    --primary-foreground: 0 0% 6%;
-    --primary-glow: 45 95% 65%;
+    /* Premium gold */
+    --primary: 42 78% 58%;
+    --primary-foreground: 0 0% 5%;
+    --primary-glow: 46 96% 68%;
 
-    --secondary: 0 0% 12%;
-    --secondary-foreground: 45 30% 96%;
+    --secondary: 0 0% 10%;
+    --secondary-foreground: 45 25% 97%;
 
-    --muted: 0 0% 14%;
-    --muted-foreground: 45 10% 65%;
+    --muted: 0 0% 12%;
+    --muted-foreground: 45 8% 62%;
 
-    --accent: 43 74% 56%;
-    --accent-foreground: 0 0% 6%;
+    --accent: 42 78% 58%;
+    --accent-foreground: 0 0% 5%;
 
     --destructive: 0 75% 55%;
     --destructive-foreground: 0 0% 98%;
