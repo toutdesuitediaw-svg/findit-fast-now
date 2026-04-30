@@ -24,8 +24,8 @@ const Header = () => {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/80 backdrop-blur-xl">
-      <div className="container mx-auto flex items-center justify-between gap-4 py-4">
+    <header className="sticky top-0 z-50 w-full border-b border-primary/15 bg-background/85 backdrop-blur-xl">
+      <div className="container mx-auto flex items-center justify-between gap-4 py-3 md:py-4 px-4">
         <Logo />
 
         <nav className="hidden lg:flex items-center gap-7">
