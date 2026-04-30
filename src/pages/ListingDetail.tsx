@@ -98,30 +98,26 @@ const ListingDetail = () => {
         <div className="grid lg:grid-cols-[1.3fr_1fr] gap-8">
           {/* Gallery */}
           <div>
-            <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-card border border-border">
-              {listing.images[activeImg] ? (
-                <img src={listing.images[activeImg]} alt={listing.title} className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-muted-foreground">Pas de photo</div>
-              )}
-              {listing.is_premium && (
-                <span className="absolute top-4 left-4 bg-gradient-gold text-primary-foreground text-xs font-bold tracking-widest px-3 py-1.5 rounded">
-                  PREMIUM
-                </span>
-              )}
-              <button onClick={toggleFav} className="absolute top-4 right-4 w-11 h-11 rounded-full bg-background/80 backdrop-blur flex items-center justify-center border border-border hover:bg-primary/20">
-                <Heart className={`w-5 h-5 ${isFav ? "fill-primary text-primary" : "text-foreground"}`} />
-              </button>
-            </div>
-            {listing.images.length > 1 && (
-              <div className="grid grid-cols-5 gap-2 mt-3">
-                {listing.images.map((src, i) => (
-                  <button key={i} onClick={() => setActiveImg(i)} className={`aspect-square rounded-lg overflow-hidden border-2 ${activeImg === i ? "border-primary" : "border-transparent"}`}>
-                    <img src={src} alt="" className="w-full h-full object-cover" />
-                  </button>
-                ))}
-              </div>
-            )}
+            <ImageGallery
+              images={listing.images || []}
+              alt={listing.title}
+              badge={
+                listing.is_premium ? (
+                  <span className="bg-gradient-gold text-primary-foreground text-xs font-bold tracking-widest px-3 py-1.5 rounded">
+                    PREMIUM
+                  </span>
+                ) : null
+              }
+              topRight={
+                <button
+                  onClick={toggleFav}
+                  aria-label="Ajouter aux favoris"
+                  className="w-11 h-11 rounded-full bg-background/80 backdrop-blur flex items-center justify-center border border-border hover:bg-primary/20"
+                >
+                  <Heart className={`w-5 h-5 ${isFav ? "fill-primary text-primary" : "text-foreground"}`} />
+                </button>
+              }
+            />
 
             <div className="mt-8">
               <h2 className="font-display text-xl font-bold mb-3">Description</h2>
