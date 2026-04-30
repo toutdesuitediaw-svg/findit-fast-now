@@ -23,11 +23,14 @@ const Listings = () => {
   }, []);
 
   return (
-    <section className="container mx-auto px-4 py-8 md:py-12">
-      <div className="flex items-end justify-between mb-6">
-        <h2 className="font-display text-2xl md:text-3xl font-bold">Annonces récentes</h2>
-        <Link to="/annonces" className="text-sm text-primary hover:underline font-medium">
-          Voir toutes les annonces →
+    <section className="container mx-auto px-4 py-10 md:py-14">
+      <div className="flex items-end justify-between mb-6 md:mb-8 gap-4">
+        <div>
+          <div className="text-[10px] tracking-[0.3em] text-primary font-semibold uppercase mb-2">À la une</div>
+          <h2 className="font-display text-2xl md:text-3xl lg:text-4xl font-bold">Annonces récentes</h2>
+        </div>
+        <Link to="/annonces" className="shrink-0 text-sm text-primary hover:underline font-medium">
+          Voir tout →
         </Link>
       </div>
 
@@ -39,7 +42,7 @@ const Listings = () => {
           <Link to="/publier" className="text-primary hover:underline font-medium">Publiez la première annonce →</Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
           {listings.map((l) => <ListingCard key={l.id} listing={l} />)}
         </div>
       )}
