@@ -1,3 +1,5 @@
+import { Lock } from "lucide-react";
+import { Link } from "react-router-dom";
 import Logo from "./Logo";
 
 const Footer = () => {
@@ -41,8 +43,16 @@ const Footer = () => {
             </div>
           ))}
         </div>
-        <div className="mt-12 pt-6 border-t border-border text-center text-xs text-muted-foreground">
-          © {new Date().getFullYear()} TOUT DE SUITE Annonces. Tous droits réservés.
+        <div className="mt-12 pt-6 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted-foreground">
+          <span>© {new Date().getFullYear()} TOUT DE SUITE Annonces. Tous droits réservés.</span>
+          <Link
+            to="/admin"
+            aria-label="Accès administrateur"
+            className="inline-flex items-center gap-1.5 text-muted-foreground/60 hover:text-primary transition-colors"
+          >
+            <Lock className="w-3.5 h-3.5" />
+            Compte admin
+          </Link>
         </div>
       </div>
     </footer>
