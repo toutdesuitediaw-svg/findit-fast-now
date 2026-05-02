@@ -105,6 +105,8 @@ const ListingDetail = () => {
     setReportReason("");
     setReportDetails("");
   };
+
+  if (loading || !listing) {
     return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>;
   }
 
