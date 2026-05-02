@@ -197,11 +197,39 @@ const ListingDetail = () => {
                   Le vendeur n'a pas renseigné de numéro de contact.
                 </p>
               )}
+              <button
+                onClick={() => setReportOpen(true)}
+                className="w-full text-xs text-muted-foreground hover:text-destructive flex items-center justify-center gap-1.5 pt-2 border-t border-border/50 transition-colors"
+              >
+                <Flag className="w-3.5 h-3.5" /> Signaler cette annonce
+              </button>
             </div>
           </aside>
         </div>
       </main>
       <Footer />
+
+      <Dialog open={reportOpen} onOpenChange={setReportOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Signaler cette annonce</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Motif</Label>
+              <Input value={reportReason} onChange={(e) => setReportReason(e.target.value)} placeholder="Ex: Arnaque, contenu interdit, faux produit..." />
+            </div>
+            <div>
+              <Label>Détails (facultatif)</Label>
+              <Textarea value={reportDetails} onChange={(e) => setReportDetails(e.target.value)} placeholder="Décrivez le problème" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setReportOpen(false)}>Annuler</Button>
+            <Button variant="destructive" onClick={submitReport} disabled={submittingReport || !reportReason.trim()}>
+              {submittingReport ? <Loader2 className="w-4 h-4 animate-spin" /> : "Envoyer le signalement"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
