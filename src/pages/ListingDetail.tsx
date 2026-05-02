@@ -87,7 +87,24 @@ const ListingDetail = () => {
     }
   };
 
-  if (loading || !listing) {
+  const submitReport = async () => {
+    if (!user) { toast.info("Connectez-vous pour signaler"); navigate("/auth"); return; }
+    if (!listing || !reportReason.trim()) return;
+    setSubmittingReport(true);
+    const { error } = await supabase.from("reports").insert({
+      reporter_id: user.id,
+      target_type: "listing",
+      target_id: listing.id,
+      reason: reportReason.trim(),
+      details: reportDetails.trim() || null,
+    });
+    setSubmittingReport(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Signalement envoyé. Merci !");
+    setReportOpen(false);
+    setReportReason("");
+    setReportDetails("");
+  };
     return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>;
   }
 
