@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_logs: {
+        Row: {
+          action: string
+          admin_id: string
+          created_at: string
+          id: string
+          metadata: Json | null
+          target_id: string | null
+          target_type: string | null
+        }
+        Insert: {
+          action: string
+          admin_id: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          target_id?: string | null
+          target_type?: string | null
+        }
+        Update: {
+          action?: string
+          admin_id?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          target_id?: string | null
+          target_type?: string | null
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           created_at: string
@@ -82,10 +112,13 @@ export type Database = {
           id: string
           images: string[]
           is_active: boolean
+          is_featured: boolean
           is_premium: boolean
           location: string | null
+          moderation_status: Database["public"]["Enums"]["listing_status"]
           price: number | null
           price_type: string | null
+          rejection_reason: string | null
           title: string
           updated_at: string
           user_id: string
@@ -99,10 +132,13 @@ export type Database = {
           id?: string
           images?: string[]
           is_active?: boolean
+          is_featured?: boolean
           is_premium?: boolean
           location?: string | null
+          moderation_status?: Database["public"]["Enums"]["listing_status"]
           price?: number | null
           price_type?: string | null
+          rejection_reason?: string | null
           title: string
           updated_at?: string
           user_id: string
@@ -116,10 +152,13 @@ export type Database = {
           id?: string
           images?: string[]
           is_active?: boolean
+          is_featured?: boolean
           is_premium?: boolean
           location?: string | null
+          moderation_status?: Database["public"]["Enums"]["listing_status"]
           price?: number | null
           price_type?: string | null
+          rejection_reason?: string | null
           title?: string
           updated_at?: string
           user_id?: string
@@ -143,7 +182,10 @@ export type Database = {
           created_at: string
           display_name: string | null
           id: string
+          is_verified: boolean
           phone: string | null
+          status: Database["public"]["Enums"]["account_status"]
+          suspended_until: string | null
           updated_at: string
           whatsapp: string | null
         }
@@ -154,7 +196,10 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id: string
+          is_verified?: boolean
           phone?: string | null
+          status?: Database["public"]["Enums"]["account_status"]
+          suspended_until?: string | null
           updated_at?: string
           whatsapp?: string | null
         }
@@ -165,9 +210,153 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id?: string
+          is_verified?: boolean
           phone?: string | null
+          status?: Database["public"]["Enums"]["account_status"]
+          suspended_until?: string | null
           updated_at?: string
           whatsapp?: string | null
+        }
+        Relationships: []
+      }
+      reports: {
+        Row: {
+          created_at: string
+          details: string | null
+          id: string
+          reason: string
+          reporter_id: string
+          resolved_at: string | null
+          resolved_by: string | null
+          status: Database["public"]["Enums"]["report_status"]
+          target_id: string
+          target_type: Database["public"]["Enums"]["report_target"]
+        }
+        Insert: {
+          created_at?: string
+          details?: string | null
+          id?: string
+          reason: string
+          reporter_id: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["report_status"]
+          target_id: string
+          target_type: Database["public"]["Enums"]["report_target"]
+        }
+        Update: {
+          created_at?: string
+          details?: string | null
+          id?: string
+          reason?: string
+          reporter_id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["report_status"]
+          target_id?: string
+          target_type?: Database["public"]["Enums"]["report_target"]
+        }
+        Relationships: []
+      }
+      site_settings: {
+        Row: {
+          description: string | null
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          description?: string | null
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Update: {
+          description?: string | null
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          id: string
+          plan: Database["public"]["Enums"]["subscription_plan"]
+          started_at: string
+          status: Database["public"]["Enums"]["subscription_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          plan?: Database["public"]["Enums"]["subscription_plan"]
+          started_at?: string
+          status?: Database["public"]["Enums"]["subscription_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          plan?: Database["public"]["Enums"]["subscription_plan"]
+          started_at?: string
+          status?: Database["public"]["Enums"]["subscription_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          external_reference: string | null
+          id: string
+          listing_id: string | null
+          metadata: Json | null
+          method: Database["public"]["Enums"]["payment_method"] | null
+          status: Database["public"]["Enums"]["transaction_status"]
+          type: Database["public"]["Enums"]["transaction_type"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency?: string
+          external_reference?: string | null
+          id?: string
+          listing_id?: string | null
+          metadata?: Json | null
+          method?: Database["public"]["Enums"]["payment_method"] | null
+          status?: Database["public"]["Enums"]["transaction_status"]
+          type?: Database["public"]["Enums"]["transaction_type"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          external_reference?: string | null
+          id?: string
+          listing_id?: string | null
+          metadata?: Json | null
+          method?: Database["public"]["Enums"]["payment_method"] | null
+          status?: Database["public"]["Enums"]["transaction_status"]
+          type?: Database["public"]["Enums"]["transaction_type"]
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -206,8 +395,27 @@ export type Database = {
       }
     }
     Enums: {
+      account_status: "active" | "suspended" | "banned"
       account_type: "particulier" | "professionnel"
       app_role: "admin" | "moderator" | "user"
+      listing_status: "pending" | "approved" | "rejected"
+      payment_method:
+        | "wave"
+        | "orange_money"
+        | "mtn"
+        | "card"
+        | "cash"
+        | "other"
+      report_status: "open" | "reviewed" | "dismissed" | "actioned"
+      report_target: "listing" | "user"
+      subscription_plan: "free" | "premium" | "business"
+      subscription_status: "active" | "cancelled" | "expired" | "trialing"
+      transaction_status: "pending" | "completed" | "failed" | "refunded"
+      transaction_type:
+        | "listing_boost"
+        | "subscription"
+        | "commission"
+        | "other"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -335,8 +543,22 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      account_status: ["active", "suspended", "banned"],
       account_type: ["particulier", "professionnel"],
       app_role: ["admin", "moderator", "user"],
+      listing_status: ["pending", "approved", "rejected"],
+      payment_method: ["wave", "orange_money", "mtn", "card", "cash", "other"],
+      report_status: ["open", "reviewed", "dismissed", "actioned"],
+      report_target: ["listing", "user"],
+      subscription_plan: ["free", "premium", "business"],
+      subscription_status: ["active", "cancelled", "expired", "trialing"],
+      transaction_status: ["pending", "completed", "failed", "refunded"],
+      transaction_type: [
+        "listing_boost",
+        "subscription",
+        "commission",
+        "other",
+      ],
     },
   },
 } as const
