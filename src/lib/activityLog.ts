@@ -7,11 +7,11 @@ export async function logAdminAction(params: {
   targetId?: string | null;
   metadata?: Record<string, unknown>;
 }) {
-  await supabase.from("activity_logs").insert({
+  await supabase.from("activity_logs").insert([{
     admin_id: params.adminId,
     action: params.action,
-    target_type: params.targetType ?? null,
-    target_id: params.targetId ?? null,
-    metadata: params.metadata ?? {},
-  });
+    target_type: params.targetType ?? undefined,
+    target_id: params.targetId ?? undefined,
+    metadata: (params.metadata ?? {}) as never,
+  }]);
 }
