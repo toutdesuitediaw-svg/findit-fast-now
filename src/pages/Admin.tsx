@@ -1,6 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Loader2, Shield, Trash2, Star, Eye, EyeOff, Plus, Pencil } from "lucide-react";
+import {
+  Loader2, Shield, Trash2, Star, Eye, EyeOff, Plus, Pencil,
+  LayoutDashboard, Users, Megaphone, AlertTriangle, FolderTree,
+  CreditCard, Settings as SettingsIcon, ShieldCheck, ShieldOff, BadgeCheck,
+  History, CheckCircle2, XCircle,
+} from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -8,17 +13,19 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { logAdminAction } from "@/lib/activityLog";
 
 type Listing = {
   id: string;
@@ -27,8 +34,11 @@ type Listing = {
   currency: string;
   is_active: boolean;
   is_premium: boolean;
+  is_featured: boolean;
   user_id: string;
   created_at: string;
+  moderation_status: "pending" | "approved" | "rejected";
+  rejection_reason: string | null;
 };
 
 type Category = {
@@ -47,10 +57,54 @@ type Profile = {
   whatsapp: string | null;
   city: string | null;
   account_type: string;
+  status: "active" | "suspended" | "banned";
+  is_verified: boolean;
   created_at: string;
 };
 
 type RoleRow = { user_id: string; role: string };
+
+type Report = {
+  id: string;
+  reporter_id: string;
+  target_type: "listing" | "user";
+  target_id: string;
+  reason: string;
+  details: string | null;
+  status: "open" | "reviewed" | "dismissed" | "actioned";
+  created_at: string;
+};
+
+type ActivityLog = {
+  id: string;
+  admin_id: string;
+  action: string;
+  target_type: string | null;
+  target_id: string | null;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+};
+
+type Transaction = {
+  id: string;
+  user_id: string;
+  amount: number;
+  currency: string;
+  type: string;
+  method: string | null;
+  status: string;
+  created_at: string;
+};
+
+type Subscription = {
+  id: string;
+  user_id: string;
+  plan: string;
+  status: string;
+  expires_at: string | null;
+};
+
+type SiteSetting = { key: string; value: unknown; description: string | null };
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -61,6 +115,11 @@ const Admin = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [roles, setRoles] = useState<RoleRow[]>([]);
+  const [reports, setReports] = useState<Report[]>([]);
+  const [logs, setLogs] = useState<ActivityLog[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [settings, setSettings] = useState<SiteSetting[]>([]);
   const [loadingData, setLoadingData] = useState(true);
 
   // Category dialog
@@ -68,48 +127,103 @@ const Admin = () => {
   const [editingCat, setEditingCat] = useState<Category | null>(null);
   const [catForm, setCatForm] = useState({ name: "", slug: "", icon: "", description: "", sort_order: 0 });
 
+  // Reject dialog
+  const [rejectDialog, setRejectDialog] = useState<Listing | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+
   useEffect(() => {
     if (authLoading || adminLoading) return;
-    if (!user) {
-      navigate("/auth");
-      return;
-    }
-    if (!isAdmin) {
-      toast.error("Accès refusé : réservé aux administrateurs.");
-      navigate("/");
-    }
+    if (!user) { navigate("/auth"); return; }
+    if (!isAdmin) { toast.error("Accès refusé : réservé aux administrateurs."); navigate("/"); }
   }, [user, isAdmin, authLoading, adminLoading, navigate]);
 
   const loadData = async () => {
     setLoadingData(true);
-    const [l, c, p, r] = await Promise.all([
+    const [l, c, p, r, rep, lg, tx, sub, st] = await Promise.all([
       supabase.from("listings").select("*").order("created_at", { ascending: false }),
       supabase.from("categories").select("*").order("sort_order"),
       supabase.from("profiles").select("*").order("created_at", { ascending: false }),
       supabase.from("user_roles").select("user_id, role"),
+      supabase.from("reports").select("*").order("created_at", { ascending: false }),
+      supabase.from("activity_logs").select("*").order("created_at", { ascending: false }).limit(100),
+      supabase.from("transactions").select("*").order("created_at", { ascending: false }).limit(100),
+      supabase.from("subscriptions").select("*"),
+      supabase.from("site_settings").select("*"),
     ]);
     if (l.data) setListings(l.data as Listing[]);
     if (c.data) setCategories(c.data as Category[]);
     if (p.data) setProfiles(p.data as Profile[]);
     if (r.data) setRoles(r.data as RoleRow[]);
+    if (rep.data) setReports(rep.data as Report[]);
+    if (lg.data) setLogs(lg.data as ActivityLog[]);
+    if (tx.data) setTransactions(tx.data as Transaction[]);
+    if (sub.data) setSubscriptions(sub.data as Subscription[]);
+    if (st.data) setSettings(st.data as SiteSetting[]);
     setLoadingData(false);
   };
 
-  useEffect(() => {
-    if (isAdmin) loadData();
-  }, [isAdmin]);
+  useEffect(() => { if (isAdmin) loadData(); }, [isAdmin]);
 
-  // === Listings actions ===
+  const log = (action: string, targetType?: string, targetId?: string | null, metadata?: Record<string, unknown>) => {
+    if (user) logAdminAction({ adminId: user.id, action, targetType, targetId, metadata });
+  };
+
+  // === Dashboard stats ===
+  const stats = useMemo(() => {
+    const revenue = transactions
+      .filter(t => t.status === "completed")
+      .reduce((sum, t) => sum + Number(t.amount || 0), 0);
+    return {
+      users: profiles.length,
+      listings: listings.length,
+      activeListings: listings.filter(l => l.is_active).length,
+      pendingListings: listings.filter(l => l.moderation_status === "pending").length,
+      openReports: reports.filter(r => r.status === "open").length,
+      premium: subscriptions.filter(s => s.plan !== "free" && s.status === "active").length,
+      revenue,
+    };
+  }, [profiles, listings, reports, subscriptions, transactions]);
+
+  // === Listings ===
   const toggleActive = async (l: Listing) => {
     const { error } = await supabase.from("listings").update({ is_active: !l.is_active }).eq("id", l.id);
     if (error) return toast.error(error.message);
     toast.success(l.is_active ? "Annonce désactivée" : "Annonce activée");
+    log(l.is_active ? "listing.deactivate" : "listing.activate", "listing", l.id);
     loadData();
   };
   const togglePremium = async (l: Listing) => {
     const { error } = await supabase.from("listings").update({ is_premium: !l.is_premium }).eq("id", l.id);
     if (error) return toast.error(error.message);
     toast.success("Statut premium mis à jour");
+    log("listing.toggle_premium", "listing", l.id, { is_premium: !l.is_premium });
+    loadData();
+  };
+  const toggleFeatured = async (l: Listing) => {
+    const { error } = await supabase.from("listings").update({ is_featured: !l.is_featured }).eq("id", l.id);
+    if (error) return toast.error(error.message);
+    toast.success("Mise en avant mise à jour");
+    log("listing.toggle_featured", "listing", l.id, { is_featured: !l.is_featured });
+    loadData();
+  };
+  const approveListing = async (l: Listing) => {
+    const { error } = await supabase.from("listings")
+      .update({ moderation_status: "approved", rejection_reason: null }).eq("id", l.id);
+    if (error) return toast.error(error.message);
+    toast.success("Annonce approuvée");
+    log("listing.approve", "listing", l.id);
+    loadData();
+  };
+  const submitReject = async () => {
+    if (!rejectDialog) return;
+    const { error } = await supabase.from("listings")
+      .update({ moderation_status: "rejected", rejection_reason: rejectReason, is_active: false })
+      .eq("id", rejectDialog.id);
+    if (error) return toast.error(error.message);
+    toast.success("Annonce refusée");
+    log("listing.reject", "listing", rejectDialog.id, { reason: rejectReason });
+    setRejectDialog(null);
+    setRejectReason("");
     loadData();
   };
   const deleteListing = async (id: string) => {
@@ -117,6 +231,7 @@ const Admin = () => {
     const { error } = await supabase.from("listings").delete().eq("id", id);
     if (error) return toast.error(error.message);
     toast.success("Annonce supprimée");
+    log("listing.delete", "listing", id);
     loadData();
   };
 
@@ -134,10 +249,8 @@ const Admin = () => {
   const saveCat = async () => {
     if (!catForm.name || !catForm.slug) return toast.error("Nom et slug requis");
     const payload = {
-      name: catForm.name,
-      slug: catForm.slug,
-      icon: catForm.icon || null,
-      description: catForm.description || null,
+      name: catForm.name, slug: catForm.slug,
+      icon: catForm.icon || null, description: catForm.description || null,
       sort_order: Number(catForm.sort_order) || 0,
     };
     const { error } = editingCat
@@ -145,6 +258,7 @@ const Admin = () => {
       : await supabase.from("categories").insert(payload);
     if (error) return toast.error(error.message);
     toast.success(editingCat ? "Catégorie mise à jour" : "Catégorie créée");
+    log(editingCat ? "category.update" : "category.create", "category", editingCat?.id ?? null, payload);
     setCatDialog(false);
     loadData();
   };
@@ -153,6 +267,7 @@ const Admin = () => {
     const { error } = await supabase.from("categories").delete().eq("id", id);
     if (error) return toast.error(error.message);
     toast.success("Catégorie supprimée");
+    log("category.delete", "category", id);
     loadData();
   };
 
@@ -166,11 +281,57 @@ const Admin = () => {
       const { error } = await supabase.from("user_roles").delete().eq("user_id", uid).eq("role", "admin");
       if (error) return toast.error(error.message);
       toast.success("Rôle admin retiré");
+      log("user.demote", "user", uid);
     } else {
       const { error } = await supabase.from("user_roles").insert({ user_id: uid, role: "admin" });
       if (error) return toast.error(error.message);
       toast.success("Rôle admin attribué");
+      log("user.promote", "user", uid);
     }
+    loadData();
+  };
+  const setUserStatus = async (uid: string, status: "active" | "suspended" | "banned") => {
+    const { error } = await supabase.from("profiles").update({ status }).eq("id", uid);
+    if (error) return toast.error(error.message);
+    toast.success(`Compte ${status === "active" ? "réactivé" : status === "suspended" ? "suspendu" : "banni"}`);
+    log(`user.${status}`, "user", uid);
+    loadData();
+  };
+  const toggleVerified = async (p: Profile) => {
+    const { error } = await supabase.from("profiles").update({ is_verified: !p.is_verified }).eq("id", p.id);
+    if (error) return toast.error(error.message);
+    toast.success(p.is_verified ? "Vérification retirée" : "Identité vérifiée");
+    log("user.verify", "user", p.id, { is_verified: !p.is_verified });
+    loadData();
+  };
+
+  // === Reports ===
+  const updateReport = async (id: string, status: Report["status"]) => {
+    const { error } = await supabase.from("reports")
+      .update({ status, resolved_by: user?.id, resolved_at: new Date().toISOString() }).eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success("Signalement mis à jour");
+    log("report.update", "report", id, { status });
+    loadData();
+  };
+  const deleteReport = async (id: string) => {
+    if (!confirm("Supprimer ce signalement ?")) return;
+    const { error } = await supabase.from("reports").delete().eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success("Signalement supprimé");
+    log("report.delete", "report", id);
+    loadData();
+  };
+
+  // === Settings ===
+  const updateSetting = async (key: string, raw: string) => {
+    let value: unknown = raw;
+    try { value = JSON.parse(raw); } catch { value = raw; }
+    const { error } = await supabase.from("site_settings")
+      .update({ value: value as never, updated_by: user?.id }).eq("key", key);
+    if (error) return toast.error(error.message);
+    toast.success("Paramètre mis à jour");
+    log("setting.update", "setting", null, { key, value });
     loadData();
   };
 
@@ -192,24 +353,118 @@ const Admin = () => {
           </div>
           <div>
             <h1 className="text-3xl font-bold">Panneau d'administration</h1>
-            <p className="text-sm text-muted-foreground">Gérez votre plateforme en toute sécurité</p>
+            <p className="text-sm text-muted-foreground">Gestion complète de la plateforme</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <Card className="p-4"><div className="text-xs text-muted-foreground">Annonces</div><div className="text-2xl font-bold">{listings.length}</div></Card>
-          <Card className="p-4"><div className="text-xs text-muted-foreground">Actives</div><div className="text-2xl font-bold text-primary">{listings.filter(l=>l.is_active).length}</div></Card>
-          <Card className="p-4"><div className="text-xs text-muted-foreground">Catégories</div><div className="text-2xl font-bold">{categories.length}</div></Card>
-          <Card className="p-4"><div className="text-xs text-muted-foreground">Utilisateurs</div><div className="text-2xl font-bold">{profiles.length}</div></Card>
-        </div>
-
-        <Tabs defaultValue="listings" className="w-full">
-          <TabsList className="mb-6">
-            <TabsTrigger value="listings">Annonces</TabsTrigger>
-            <TabsTrigger value="categories">Catégories</TabsTrigger>
-            <TabsTrigger value="users">Utilisateurs</TabsTrigger>
+        <Tabs defaultValue="dashboard" className="w-full">
+          <TabsList className="mb-6 flex-wrap h-auto">
+            <TabsTrigger value="dashboard"><LayoutDashboard className="w-4 h-4 mr-1" />Dashboard</TabsTrigger>
+            <TabsTrigger value="users"><Users className="w-4 h-4 mr-1" />Utilisateurs</TabsTrigger>
+            <TabsTrigger value="listings"><Megaphone className="w-4 h-4 mr-1" />Annonces</TabsTrigger>
+            <TabsTrigger value="moderation"><AlertTriangle className="w-4 h-4 mr-1" />Modération</TabsTrigger>
+            <TabsTrigger value="payments"><CreditCard className="w-4 h-4 mr-1" />Paiements</TabsTrigger>
+            <TabsTrigger value="categories"><FolderTree className="w-4 h-4 mr-1" />Catégories</TabsTrigger>
+            <TabsTrigger value="settings"><SettingsIcon className="w-4 h-4 mr-1" />Paramètres</TabsTrigger>
           </TabsList>
 
+          {/* === DASHBOARD === */}
+          <TabsContent value="dashboard">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <Card className="p-4"><div className="text-xs text-muted-foreground">Utilisateurs</div><div className="text-2xl font-bold">{stats.users}</div></Card>
+              <Card className="p-4"><div className="text-xs text-muted-foreground">Annonces</div><div className="text-2xl font-bold">{stats.listings}</div></Card>
+              <Card className="p-4"><div className="text-xs text-muted-foreground">Actives</div><div className="text-2xl font-bold text-primary">{stats.activeListings}</div></Card>
+              <Card className="p-4"><div className="text-xs text-muted-foreground">En attente</div><div className="text-2xl font-bold text-amber-500">{stats.pendingListings}</div></Card>
+              <Card className="p-4"><div className="text-xs text-muted-foreground">Signalements ouverts</div><div className="text-2xl font-bold text-destructive">{stats.openReports}</div></Card>
+              <Card className="p-4"><div className="text-xs text-muted-foreground">Abonnés premium</div><div className="text-2xl font-bold">{stats.premium}</div></Card>
+              <Card className="p-4 col-span-2"><div className="text-xs text-muted-foreground">Revenus (complétés)</div><div className="text-2xl font-bold text-primary">{stats.revenue.toLocaleString()} FCFA</div></Card>
+            </div>
+
+            <Card className="p-4">
+              <div className="flex items-center gap-2 mb-3"><History className="w-4 h-4" /><h3 className="font-semibold">Activité admin récente</h3></div>
+              <div className="space-y-1 max-h-80 overflow-y-auto text-sm">
+                {logs.length === 0 ? (
+                  <div className="text-muted-foreground text-center py-4">Aucune activité</div>
+                ) : logs.slice(0, 30).map(lg => (
+                  <div key={lg.id} className="flex justify-between gap-2 py-1 border-b border-border/50 last:border-0">
+                    <span className="font-mono text-xs">{lg.action}</span>
+                    <span className="text-muted-foreground text-xs">{new Date(lg.created_at).toLocaleString("fr-FR")}</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </TabsContent>
+
+          {/* === USERS === */}
+          <TabsContent value="users">
+            <Card className="overflow-hidden">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nom</TableHead>
+                      <TableHead>Téléphone</TableHead>
+                      <TableHead>Statut</TableHead>
+                      <TableHead>Rôle</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {profiles.map((p) => (
+                      <TableRow key={p.id}>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-1">
+                            {p.display_name ?? "—"}
+                            {p.is_verified && <BadgeCheck className="w-4 h-4 text-primary" />}
+                          </div>
+                          <div className="text-xs text-muted-foreground">{p.city ?? ""}</div>
+                        </TableCell>
+                        <TableCell>{p.phone ?? "—"}</TableCell>
+                        <TableCell>
+                          <Badge variant={p.status === "active" ? "default" : p.status === "suspended" ? "secondary" : "destructive"}>
+                            {p.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {isUserAdmin(p.id) ? <Badge className="bg-primary text-primary-foreground">Admin</Badge> : <Badge variant="outline">{p.account_type}</Badge>}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1 flex-wrap">
+                            <Button size="sm" variant="ghost" onClick={() => toggleVerified(p)} title="Vérifier identité">
+                              <BadgeCheck className={`w-4 h-4 ${p.is_verified ? "text-primary" : ""}`} />
+                            </Button>
+                            {p.status !== "suspended" ? (
+                              <Button size="sm" variant="ghost" onClick={() => setUserStatus(p.id, "suspended")} title="Suspendre">
+                                <ShieldOff className="w-4 h-4 text-amber-500" />
+                              </Button>
+                            ) : (
+                              <Button size="sm" variant="ghost" onClick={() => setUserStatus(p.id, "active")} title="Réactiver">
+                                <ShieldCheck className="w-4 h-4 text-primary" />
+                              </Button>
+                            )}
+                            {p.status !== "banned" ? (
+                              <Button size="sm" variant="ghost" onClick={() => setUserStatus(p.id, "banned")} title="Bannir">
+                                <Trash2 className="w-4 h-4 text-destructive" />
+                              </Button>
+                            ) : (
+                              <Button size="sm" variant="ghost" onClick={() => setUserStatus(p.id, "active")} title="Débannir">
+                                <ShieldCheck className="w-4 h-4" />
+                              </Button>
+                            )}
+                            <Button size="sm" variant={isUserAdmin(p.id) ? "outline" : "gold"} onClick={() => toggleAdmin(p.id)}>
+                              {isUserAdmin(p.id) ? "Retirer admin" : "Promouvoir"}
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </Card>
+          </TabsContent>
+
+          {/* === LISTINGS === */}
           <TabsContent value="listings">
             <Card className="overflow-hidden">
               <div className="overflow-x-auto">
@@ -218,25 +473,45 @@ const Admin = () => {
                     <TableRow>
                       <TableHead>Titre</TableHead>
                       <TableHead>Prix</TableHead>
+                      <TableHead>Modération</TableHead>
                       <TableHead>Statut</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {loadingData ? (
-                      <TableRow><TableCell colSpan={4} className="text-center py-8"><Loader2 className="w-5 h-5 animate-spin mx-auto" /></TableCell></TableRow>
+                      <TableRow><TableCell colSpan={5} className="text-center py-8"><Loader2 className="w-5 h-5 animate-spin mx-auto" /></TableCell></TableRow>
                     ) : listings.map((l) => (
                       <TableRow key={l.id}>
-                        <TableCell className="font-medium max-w-[300px] truncate">{l.title}</TableCell>
+                        <TableCell className="font-medium max-w-[280px] truncate">{l.title}</TableCell>
                         <TableCell>{l.price ? `${l.price} ${l.currency}` : "-"}</TableCell>
                         <TableCell>
-                          <div className="flex gap-1">
+                          <Badge variant={l.moderation_status === "approved" ? "default" : l.moderation_status === "pending" ? "secondary" : "destructive"}>
+                            {l.moderation_status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-1 flex-wrap">
                             <Badge variant={l.is_active ? "default" : "secondary"}>{l.is_active ? "Actif" : "Inactif"}</Badge>
                             {l.is_premium && <Badge className="bg-primary text-primary-foreground">Premium</Badge>}
+                            {l.is_featured && <Badge className="bg-amber-500 text-white">À la une</Badge>}
                           </div>
                         </TableCell>
                         <TableCell className="text-right">
-                          <div className="flex justify-end gap-1">
+                          <div className="flex justify-end gap-1 flex-wrap">
+                            {l.moderation_status !== "approved" && (
+                              <Button size="sm" variant="ghost" onClick={() => approveListing(l)} title="Approuver">
+                                <CheckCircle2 className="w-4 h-4 text-primary" />
+                              </Button>
+                            )}
+                            {l.moderation_status !== "rejected" && (
+                              <Button size="sm" variant="ghost" onClick={() => { setRejectDialog(l); setRejectReason(""); }} title="Refuser">
+                                <XCircle className="w-4 h-4 text-destructive" />
+                              </Button>
+                            )}
+                            <Button size="sm" variant="ghost" onClick={() => toggleFeatured(l)} title="Mettre en avant">
+                              <Star className={`w-4 h-4 ${l.is_featured ? "fill-amber-500 text-amber-500" : ""}`} />
+                            </Button>
                             <Button size="sm" variant="ghost" onClick={() => togglePremium(l)} title="Premium">
                               <Star className={`w-4 h-4 ${l.is_premium ? "fill-primary text-primary" : ""}`} />
                             </Button>
@@ -256,6 +531,99 @@ const Admin = () => {
             </Card>
           </TabsContent>
 
+          {/* === MODERATION === */}
+          <TabsContent value="moderation">
+            <div className="grid lg:grid-cols-2 gap-4">
+              <Card className="p-4">
+                <h3 className="font-semibold mb-3 flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-destructive" />Signalements</h3>
+                <div className="space-y-2 max-h-[600px] overflow-y-auto">
+                  {reports.length === 0 ? (
+                    <div className="text-muted-foreground text-center py-6 text-sm">Aucun signalement</div>
+                  ) : reports.map(r => (
+                    <div key={r.id} className="border border-border rounded-lg p-3 space-y-2">
+                      <div className="flex justify-between items-start gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge variant="outline">{r.target_type}</Badge>
+                            <Badge variant={r.status === "open" ? "destructive" : "secondary"}>{r.status}</Badge>
+                          </div>
+                          <div className="font-medium mt-1 text-sm">{r.reason}</div>
+                          {r.details && <div className="text-xs text-muted-foreground mt-1">{r.details}</div>}
+                          <div className="text-xs text-muted-foreground mt-1 font-mono truncate">cible: {r.target_id}</div>
+                        </div>
+                      </div>
+                      <div className="flex gap-1 flex-wrap">
+                        <Button size="sm" variant="outline" onClick={() => updateReport(r.id, "reviewed")}>Examiné</Button>
+                        <Button size="sm" variant="outline" onClick={() => updateReport(r.id, "actioned")}>Action prise</Button>
+                        <Button size="sm" variant="ghost" onClick={() => updateReport(r.id, "dismissed")}>Rejeter</Button>
+                        <Button size="sm" variant="ghost" onClick={() => deleteReport(r.id)}><Trash2 className="w-3 h-3 text-destructive" /></Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+
+              <Card className="p-4">
+                <h3 className="font-semibold mb-3 flex items-center gap-2"><History className="w-4 h-4" />Logs d'activité</h3>
+                <div className="space-y-1 max-h-[600px] overflow-y-auto text-sm">
+                  {logs.map(lg => (
+                    <div key={lg.id} className="py-2 border-b border-border/50 last:border-0">
+                      <div className="flex justify-between gap-2">
+                        <span className="font-mono text-xs">{lg.action}</span>
+                        <span className="text-muted-foreground text-xs">{new Date(lg.created_at).toLocaleString("fr-FR")}</span>
+                      </div>
+                      {lg.target_id && <div className="text-xs text-muted-foreground font-mono truncate">{lg.target_type}: {lg.target_id}</div>}
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* === PAYMENTS === */}
+          <TabsContent value="payments">
+            <div className="grid md:grid-cols-3 gap-4 mb-6">
+              <Card className="p-4"><div className="text-xs text-muted-foreground">Transactions</div><div className="text-2xl font-bold">{transactions.length}</div></Card>
+              <Card className="p-4"><div className="text-xs text-muted-foreground">Revenus complétés</div><div className="text-2xl font-bold text-primary">{stats.revenue.toLocaleString()} FCFA</div></Card>
+              <Card className="p-4"><div className="text-xs text-muted-foreground">Abonnés premium</div><div className="text-2xl font-bold">{stats.premium}</div></Card>
+            </div>
+            <Card className="p-4 mb-4 bg-muted/30 border-dashed">
+              <p className="text-sm text-muted-foreground">
+                💡 La structure de paiement est prête (Wave, Orange Money, MTN, commissions, abonnements).
+                L'intégration avec un fournisseur de paiement mobile money pourra être ajoutée ultérieurement.
+              </p>
+            </Card>
+            <Card className="overflow-hidden">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Méthode</TableHead>
+                      <TableHead>Montant</TableHead>
+                      <TableHead>Statut</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {transactions.length === 0 ? (
+                      <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Aucune transaction</TableCell></TableRow>
+                    ) : transactions.map(t => (
+                      <TableRow key={t.id}>
+                        <TableCell className="text-xs">{new Date(t.created_at).toLocaleString("fr-FR")}</TableCell>
+                        <TableCell><Badge variant="outline">{t.type}</Badge></TableCell>
+                        <TableCell>{t.method ?? "—"}</TableCell>
+                        <TableCell className="font-medium">{Number(t.amount).toLocaleString()} {t.currency}</TableCell>
+                        <TableCell><Badge variant={t.status === "completed" ? "default" : t.status === "failed" ? "destructive" : "secondary"}>{t.status}</Badge></TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </Card>
+          </TabsContent>
+
+          {/* === CATEGORIES === */}
           <TabsContent value="categories">
             <div className="flex justify-end mb-4">
               <Button variant="gold" onClick={() => openCatDialog()}><Plus className="w-4 h-4" /> Nouvelle catégorie</Button>
@@ -289,39 +657,14 @@ const Admin = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="users">
-            <Card className="overflow-hidden">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nom</TableHead>
-                      <TableHead>Téléphone</TableHead>
-                      <TableHead>Ville</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Rôle</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {profiles.map((p) => (
-                      <TableRow key={p.id}>
-                        <TableCell className="font-medium">{p.display_name ?? "—"}</TableCell>
-                        <TableCell>{p.phone ?? "—"}</TableCell>
-                        <TableCell>{p.city ?? "—"}</TableCell>
-                        <TableCell><Badge variant="outline">{p.account_type}</Badge></TableCell>
-                        <TableCell>
-                          {isUserAdmin(p.id) ? <Badge className="bg-primary text-primary-foreground">Admin</Badge> : <Badge variant="secondary">Utilisateur</Badge>}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button size="sm" variant={isUserAdmin(p.id) ? "outline" : "gold"} onClick={() => toggleAdmin(p.id)}>
-                            {isUserAdmin(p.id) ? "Retirer admin" : "Promouvoir admin"}
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+          {/* === SETTINGS === */}
+          <TabsContent value="settings">
+            <Card className="p-4">
+              <h3 className="font-semibold mb-4">Paramètres du site</h3>
+              <div className="space-y-4">
+                {settings.map(s => (
+                  <SettingRow key={s.key} setting={s} onSave={updateSetting} />
+                ))}
               </div>
             </Card>
           </TabsContent>
@@ -329,6 +672,7 @@ const Admin = () => {
       </main>
       <Footer />
 
+      {/* Category dialog */}
       <Dialog open={catDialog} onOpenChange={setCatDialog}>
         <DialogContent>
           <DialogHeader><DialogTitle>{editingCat ? "Modifier la catégorie" : "Nouvelle catégorie"}</DialogTitle></DialogHeader>
@@ -345,6 +689,40 @@ const Admin = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Reject dialog */}
+      <Dialog open={!!rejectDialog} onOpenChange={(o) => !o && setRejectDialog(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Refuser l'annonce</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">{rejectDialog?.title}</p>
+            <div>
+              <Label>Motif du refus</Label>
+              <Textarea value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} placeholder="Expliquez pourquoi cette annonce est refusée..." />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setRejectDialog(null)}>Annuler</Button>
+            <Button variant="destructive" onClick={submitReject} disabled={!rejectReason.trim()}>Refuser</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+const SettingRow = ({ setting, onSave }: { setting: SiteSetting; onSave: (k: string, v: string) => void }) => {
+  const [value, setValue] = useState(typeof setting.value === "string" ? setting.value : JSON.stringify(setting.value));
+  return (
+    <div className="grid md:grid-cols-3 gap-3 items-start border-b border-border/50 pb-4 last:border-0">
+      <div>
+        <div className="font-medium text-sm">{setting.key}</div>
+        {setting.description && <div className="text-xs text-muted-foreground">{setting.description}</div>}
+      </div>
+      <div className="md:col-span-2 flex gap-2">
+        <Input value={value} onChange={(e) => setValue(e.target.value)} />
+        <Button variant="gold" size="sm" onClick={() => onSave(setting.key, value)}>Enregistrer</Button>
+      </div>
     </div>
   );
 };

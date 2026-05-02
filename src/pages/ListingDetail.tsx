@@ -1,9 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Heart, Loader2, MapPin, MessageCircle, Phone } from "lucide-react";
+import { Flag, Heart, Loader2, MapPin, MessageCircle, Phone } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ImageGallery from "@/components/ImageGallery";
@@ -32,6 +36,10 @@ const ListingDetail = () => {
   const [loading, setLoading] = useState(true);
   const [activeImg, setActiveImg] = useState(0);
   const [isFav, setIsFav] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState("");
+  const [reportDetails, setReportDetails] = useState("");
+  const [submittingReport, setSubmittingReport] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -77,6 +85,25 @@ const ListingDetail = () => {
       setIsFav(true);
       toast.success("Ajouté aux favoris ❤️");
     }
+  };
+
+  const submitReport = async () => {
+    if (!user) { toast.info("Connectez-vous pour signaler"); navigate("/auth"); return; }
+    if (!listing || !reportReason.trim()) return;
+    setSubmittingReport(true);
+    const { error } = await supabase.from("reports").insert({
+      reporter_id: user.id,
+      target_type: "listing",
+      target_id: listing.id,
+      reason: reportReason.trim(),
+      details: reportDetails.trim() || null,
+    });
+    setSubmittingReport(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Signalement envoyé. Merci !");
+    setReportOpen(false);
+    setReportReason("");
+    setReportDetails("");
   };
 
   if (loading || !listing) {
@@ -170,11 +197,39 @@ const ListingDetail = () => {
                   Le vendeur n'a pas renseigné de numéro de contact.
                 </p>
               )}
+              <button
+                onClick={() => setReportOpen(true)}
+                className="w-full text-xs text-muted-foreground hover:text-destructive flex items-center justify-center gap-1.5 pt-2 border-t border-border/50 transition-colors"
+              >
+                <Flag className="w-3.5 h-3.5" /> Signaler cette annonce
+              </button>
             </div>
           </aside>
         </div>
       </main>
       <Footer />
+
+      <Dialog open={reportOpen} onOpenChange={setReportOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Signaler cette annonce</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Motif</Label>
+              <Input value={reportReason} onChange={(e) => setReportReason(e.target.value)} placeholder="Ex: Arnaque, contenu interdit, faux produit..." />
+            </div>
+            <div>
+              <Label>Détails (facultatif)</Label>
+              <Textarea value={reportDetails} onChange={(e) => setReportDetails(e.target.value)} placeholder="Décrivez le problème" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setReportOpen(false)}>Annuler</Button>
+            <Button variant="destructive" onClick={submitReport} disabled={submittingReport || !reportReason.trim()}>
+              {submittingReport ? <Loader2 className="w-4 h-4 animate-spin" /> : "Envoyer le signalement"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
