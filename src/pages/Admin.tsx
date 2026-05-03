@@ -4,7 +4,7 @@ import {
   Loader2, Shield, Trash2, Star, Eye, EyeOff, Plus, Pencil,
   LayoutDashboard, Users, Megaphone, AlertTriangle, FolderTree,
   CreditCard, Settings as SettingsIcon, ShieldCheck, ShieldOff, BadgeCheck,
-  History, CheckCircle2, XCircle,
+  History, CheckCircle2, XCircle, ArrowLeft,
 } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -347,14 +347,20 @@ const Admin = () => {
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
       <main className="flex-1 container mx-auto px-4 py-8">
-        <div className="flex items-center gap-3 mb-8">
-          <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-center">
-            <Shield className="w-6 h-6 text-primary" />
+        <div className="flex items-center justify-between gap-3 mb-8">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-center">
+              <Shield className="w-6 h-6 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold">Panneau d'administration</h1>
+              <p className="text-sm text-muted-foreground">Gestion complète de la plateforme</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-3xl font-bold">Panneau d'administration</h1>
-            <p className="text-sm text-muted-foreground">Gestion complète de la plateforme</p>
-          </div>
+          <Button variant="outline" onClick={() => navigate("/")} className="gap-2">
+            <ArrowLeft className="w-4 h-4" />
+            Retour au site
+          </Button>
         </div>
 
         <Tabs defaultValue="dashboard" className="w-full">
