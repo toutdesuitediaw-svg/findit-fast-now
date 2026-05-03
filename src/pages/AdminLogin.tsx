@@ -44,15 +44,25 @@ const AdminLogin = () => {
   useEffect(() => {
     if (bootstrapped.current) return;
     bootstrapped.current = true;
-    supabase.functions
-      .invoke("bootstrap-admin", {
-        body: {
-          email: "test@toutsuiteannonce.com",
-          password: "Azerty10@",
-          displayName: "Administrateur",
-        },
-      })
-      .catch(() => {});
+    (async () => {
+      try {
+        // Skip if any admin already exists (avoids expected 403 noise)
+        const { count } = await supabase
+          .from("user_roles")
+          .select("*", { count: "exact", head: true })
+          .eq("role", "admin");
+        if ((count ?? 0) > 0) return;
+        await supabase.functions.invoke("bootstrap-admin", {
+          body: {
+            email: "test@toutsuiteannonce.com",
+            password: "Azerty10@",
+            displayName: "Administrateur",
+          },
+        });
+      } catch {
+        /* ignore */
+      }
+    })();
   }, []);
 
   useEffect(() => {
