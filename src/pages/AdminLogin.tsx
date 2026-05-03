@@ -40,24 +40,14 @@ const AdminLogin = () => {
   const [lockedUntil, setLockedUntil] = useState<number | null>(null);
   const bootstrapped = useRef(false);
 
-  // Try to bootstrap default admin (idempotent: returns 403 if one already exists)
+  // Ensure default admin exists; function is idempotent when already configured.
   useEffect(() => {
     if (bootstrapped.current) return;
     bootstrapped.current = true;
     (async () => {
       try {
-        // Skip if any admin already exists (avoids expected 403 noise)
-        const { count } = await supabase
-          .from("user_roles")
-          .select("*", { count: "exact", head: true })
-          .eq("role", "admin");
-        if ((count ?? 0) > 0) return;
         await supabase.functions.invoke("bootstrap-admin", {
-          body: {
-            email: "test@toutsuiteannonce.com",
-            password: "Azerty10@",
-            displayName: "Administrateur",
-          },
+          body: {},
         });
       } catch {
         /* ignore */
