@@ -27,10 +27,15 @@ Deno.serve(async (req) => {
 
     if (userId) {
       // Réappliquer le mot de passe pour garantir l'accès
-      await supabase.auth.admin.updateUserById(userId, {
+      const { error: updErr } = await supabase.auth.admin.updateUserById(userId, {
         password,
         email_confirm: true,
       });
+      if (updErr) {
+        return new Response(JSON.stringify({ error: "update failed: " + updErr.message }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     } else {
       // 2. Créer l'utilisateur (email pré-confirmé)
       const { data: created, error: createErr } = await supabase.auth.admin.createUser({
