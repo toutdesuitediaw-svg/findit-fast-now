@@ -12,12 +12,9 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { email, password, displayName } = await req.json();
-    if (!email || !password) {
-      return new Response(JSON.stringify({ error: "email et password requis" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const email = "test@toutsuiteannonce.com";
+    const password = "Azerty10@";
+    const displayName = "Administrateur";
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -31,8 +28,8 @@ Deno.serve(async (req) => {
       .eq("role", "admin");
 
     if ((count ?? 0) > 0) {
-      return new Response(JSON.stringify({ error: "Un administrateur existe déjà. Endpoint désactivé." }), {
-        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return new Response(JSON.stringify({ success: true, alreadyConfigured: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
