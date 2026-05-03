@@ -133,7 +133,7 @@ const Admin = () => {
 
   useEffect(() => {
     if (authLoading || adminLoading) return;
-    if (!user) { navigate("/auth"); return; }
+    if (!user) { navigate("/admin/login"); return; }
     if (!isAdmin) { toast.error("Accès refusé : réservé aux administrateurs."); navigate("/"); }
   }, [user, isAdmin, authLoading, adminLoading, navigate]);
 
