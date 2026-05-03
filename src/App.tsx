@@ -11,6 +11,7 @@ import PublishListing from "./pages/PublishListing.tsx";
 import ListingDetail from "./pages/ListingDetail.tsx";
 import ListingsPage from "./pages/ListingsPage.tsx";
 import Admin from "./pages/Admin.tsx";
+import AdminLogin from "./pages/AdminLogin.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -29,6 +30,7 @@ const App = () => (
             <Route path="/publier" element={<PublishListing />} />
             <Route path="/annonces" element={<ListingsPage />} />
             <Route path="/annonce/:id" element={<ListingDetail />} />
+            <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
