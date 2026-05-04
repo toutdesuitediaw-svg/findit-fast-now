@@ -108,7 +108,7 @@ type SiteSetting = { key: string; value: unknown; description: string | null };
 
 const Admin = () => {
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, signOut } = useAuth();
   const { isAdmin, loading: adminLoading } = useAdmin();
 
   const [listings, setListings] = useState<Listing[]>([]);
