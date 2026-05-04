@@ -55,9 +55,25 @@ const Auth = () => {
       if (error) toast.error(error.message);
       else toast.success("Compte créé ! Vérifiez votre email.");
     } else {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) toast.error(error.message === "Invalid login credentials" ? "Email ou mot de passe incorrect" : error.message);
-      else toast.success("Bienvenue !");
+      else {
+        // Vérifier le statut du compte
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("status")
+          .eq("id", data.user.id)
+          .maybeSingle();
+        if (profile?.status === "banned") {
+          await supabase.auth.signOut();
+          toast.error("Ce compte a été banni. Accès refusé.");
+        } else if (profile?.status === "suspended") {
+          await supabase.auth.signOut();
+          toast.error("Ce compte est suspendu. Contactez le support.");
+        } else {
+          toast.success("Bienvenue !");
+        }
+      }
     }
     setBusy(false);
   };
