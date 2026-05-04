@@ -42,6 +42,17 @@ const PublishListing = () => {
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/auth", { replace: true });
+    if (user) {
+      supabase.from("profiles").select("status").eq("id", user.id).maybeSingle().then(({ data }) => {
+        if (data?.status === "banned") {
+          toast.error("Ce compte est banni — publication interdite.");
+          supabase.auth.signOut().then(() => navigate("/", { replace: true }));
+        } else if (data?.status === "suspended") {
+          toast.error("Ce compte est suspendu — publication temporairement bloquée.");
+          navigate("/dashboard", { replace: true });
+        }
+      });
+    }
   }, [user, authLoading, navigate]);
 
   useEffect(() => {
