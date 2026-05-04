@@ -4,7 +4,7 @@ import {
   Loader2, Shield, Trash2, Star, Eye, EyeOff, Plus, Pencil,
   LayoutDashboard, Users, Megaphone, AlertTriangle, FolderTree,
   CreditCard, Settings as SettingsIcon, ShieldCheck, ShieldOff, BadgeCheck,
-  History, CheckCircle2, XCircle, ArrowLeft,
+  History, CheckCircle2, XCircle, ArrowLeft, LogOut,
 } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -108,7 +108,7 @@ type SiteSetting = { key: string; value: unknown; description: string | null };
 
 const Admin = () => {
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, signOut } = useAuth();
   const { isAdmin, loading: adminLoading } = useAdmin();
 
   const [listings, setListings] = useState<Listing[]>([]);
@@ -357,10 +357,24 @@ const Admin = () => {
               <p className="text-sm text-muted-foreground">Gestion complète de la plateforme</p>
             </div>
           </div>
-          <Button variant="outline" onClick={() => navigate("/")} className="gap-2">
-            <ArrowLeft className="w-4 h-4" />
-            Retour au site
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => navigate("/")} className="gap-2">
+              <ArrowLeft className="w-4 h-4" />
+              Retour au site
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={async () => {
+                await signOut();
+                toast.success("Déconnexion réussie");
+                navigate("/admin/login", { replace: true });
+              }}
+              className="gap-2"
+            >
+              <LogOut className="w-4 h-4" />
+              Déconnexion
+            </Button>
+          </div>
         </div>
 
         <Tabs defaultValue="dashboard" className="w-full">
