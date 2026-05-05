@@ -327,7 +327,65 @@ const Admin = () => {
     loadData();
   };
 
-  // === Reports ===
+  const openEditUser = (p: Profile) => {
+    setEditUser(p);
+    setEditUserForm({
+      display_name: p.display_name ?? "",
+      email: emails[p.id] ?? "",
+      phone: p.phone ?? "",
+    });
+  };
+  const saveEditUser = async () => {
+    if (!editUser) return;
+    const { display_name, email, phone } = editUserForm;
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return toast.error("Email invalide");
+    if (phone && !/^[+0-9 ()-]{6,20}$/.test(phone)) return toast.error("Téléphone invalide");
+    setSavingUser(true);
+    const emailChanged = email !== (emails[editUser.id] ?? "");
+    const { data, error } = await supabase.functions.invoke("admin-users", {
+      body: {
+        action: "update",
+        userId: editUser.id,
+        display_name,
+        phone,
+        ...(emailChanged ? { email } : {}),
+      },
+    });
+    setSavingUser(false);
+    if (error || data?.error) return toast.error(data?.error ?? error?.message ?? "Erreur");
+    toast.success("Utilisateur mis à jour");
+    log("user.update", "user", editUser.id, { display_name, phone, emailChanged });
+    setEditUser(null);
+    loadData();
+  };
+
+  const openResetUser = (p: Profile) => {
+    setResetUser(p);
+    setResetMode("email");
+    setResetPassword("");
+  };
+  const submitResetPassword = async () => {
+    if (!resetUser) return;
+    if (resetMode === "manual" && resetPassword.length < 8) {
+      return toast.error("Mot de passe : 8 caractères minimum");
+    }
+    setResettingPwd(true);
+    const { data, error } = await supabase.functions.invoke("admin-users", {
+      body: {
+        action: "reset_password",
+        userId: resetUser.id,
+        mode: resetMode,
+        ...(resetMode === "manual" ? { new_password: resetPassword } : {}),
+      },
+    });
+    setResettingPwd(false);
+    if (error || data?.error) return toast.error(data?.error ?? error?.message ?? "Erreur");
+    toast.success(resetMode === "email" ? "Email de réinitialisation envoyé" : "Mot de passe réinitialisé");
+    log("user.reset_password", "user", resetUser.id, { mode: resetMode });
+    setResetUser(null);
+  };
+
+
   const updateReport = async (id: string, status: Report["status"]) => {
     const { error } = await supabase.from("reports")
       .update({ status, resolved_by: user?.id, resolved_at: new Date().toISOString() }).eq("id", id);
