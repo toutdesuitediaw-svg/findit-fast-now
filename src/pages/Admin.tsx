@@ -815,6 +815,74 @@ const Admin = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Edit user dialog */}
+      <Dialog open={!!editUser} onOpenChange={(o) => !o && setEditUser(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Modifier l'utilisateur</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Nom</Label>
+              <Input value={editUserForm.display_name} onChange={(e) => setEditUserForm({ ...editUserForm, display_name: e.target.value })} />
+            </div>
+            <div>
+              <Label>Email</Label>
+              <Input type="email" value={editUserForm.email} onChange={(e) => setEditUserForm({ ...editUserForm, email: e.target.value })} />
+            </div>
+            <div>
+              <Label>Téléphone</Label>
+              <Input type="tel" value={editUserForm.phone} onChange={(e) => setEditUserForm({ ...editUserForm, phone: e.target.value })} placeholder="+225 ..." />
+            </div>
+            <p className="text-xs text-muted-foreground">Le mot de passe ne s'affiche jamais. Utilisez « Mot de passe » pour le réinitialiser.</p>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setEditUser(null)}>Annuler</Button>
+            <Button variant="gold" onClick={saveEditUser} disabled={savingUser}>
+              {savingUser && <Loader2 className="w-4 h-4 animate-spin mr-1" />}Enregistrer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset password dialog */}
+      <Dialog open={!!resetUser} onOpenChange={(o) => !o && setResetUser(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Réinitialiser le mot de passe</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Pour <span className="font-medium text-foreground">{resetUser?.display_name ?? emails[resetUser?.id ?? ""] ?? "cet utilisateur"}</span>.
+            </p>
+            <div className="flex gap-2">
+              <Button size="sm" variant={resetMode === "email" ? "gold" : "outline"} onClick={() => setResetMode("email")} className="gap-1">
+                <Mail className="w-4 h-4" /> Envoyer un email
+              </Button>
+              <Button size="sm" variant={resetMode === "manual" ? "gold" : "outline"} onClick={() => setResetMode("manual")} className="gap-1">
+                <KeyRound className="w-4 h-4" /> Définir manuellement
+              </Button>
+            </div>
+            {resetMode === "manual" ? (
+              <div>
+                <Label>Nouveau mot de passe (8 car. min.)</Label>
+                <Input type="password" value={resetPassword} onChange={(e) => setResetPassword(e.target.value)} autoComplete="new-password" />
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Un email contenant un lien de réinitialisation sera envoyé à l'adresse de l'utilisateur.
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setResetUser(null)}>Annuler</Button>
+            <Button
+              variant="destructive"
+              onClick={() => { if (confirm("Confirmer la réinitialisation du mot de passe ?")) submitResetPassword(); }}
+              disabled={resettingPwd}
+            >
+              {resettingPwd && <Loader2 className="w-4 h-4 animate-spin mr-1" />}Confirmer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
