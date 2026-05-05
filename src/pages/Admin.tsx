@@ -4,7 +4,7 @@ import {
   Loader2, Shield, Trash2, Star, Eye, EyeOff, Plus, Pencil,
   LayoutDashboard, Users, Megaphone, AlertTriangle, FolderTree,
   CreditCard, Settings as SettingsIcon, ShieldCheck, ShieldOff, BadgeCheck,
-  History, CheckCircle2, XCircle, ArrowLeft, LogOut,
+  History, CheckCircle2, XCircle, ArrowLeft, LogOut, KeyRound, Mail,
 } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -121,6 +121,7 @@ const Admin = () => {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [settings, setSettings] = useState<SiteSetting[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+  const [emails, setEmails] = useState<Record<string, string | null>>({});
 
   // Category dialog
   const [catDialog, setCatDialog] = useState(false);
@@ -130,6 +131,17 @@ const Admin = () => {
   // Reject dialog
   const [rejectDialog, setRejectDialog] = useState<Listing | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+
+  // Edit user dialog
+  const [editUser, setEditUser] = useState<Profile | null>(null);
+  const [editUserForm, setEditUserForm] = useState({ display_name: "", email: "", phone: "" });
+  const [savingUser, setSavingUser] = useState(false);
+
+  // Reset password dialog
+  const [resetUser, setResetUser] = useState<Profile | null>(null);
+  const [resetMode, setResetMode] = useState<"email" | "manual">("email");
+  const [resetPassword, setResetPassword] = useState("");
+  const [resettingPwd, setResettingPwd] = useState(false);
 
   useEffect(() => {
     if (authLoading || adminLoading) return;
@@ -160,6 +172,16 @@ const Admin = () => {
     if (sub.data) setSubscriptions(sub.data as Subscription[]);
     if (st.data) setSettings(st.data as SiteSetting[]);
     setLoadingData(false);
+
+    // Fetch emails via secure admin function
+    try {
+      const { data: ed } = await supabase.functions.invoke("admin-users", { body: { action: "list" } });
+      if (ed?.users) {
+        const map: Record<string, string | null> = {};
+        for (const u of ed.users as { id: string; email: string | null }[]) map[u.id] = u.email;
+        setEmails(map);
+      }
+    } catch { /* ignore */ }
   };
 
   useEffect(() => { if (isAdmin) loadData(); }, [isAdmin]);
@@ -305,7 +327,65 @@ const Admin = () => {
     loadData();
   };
 
-  // === Reports ===
+  const openEditUser = (p: Profile) => {
+    setEditUser(p);
+    setEditUserForm({
+      display_name: p.display_name ?? "",
+      email: emails[p.id] ?? "",
+      phone: p.phone ?? "",
+    });
+  };
+  const saveEditUser = async () => {
+    if (!editUser) return;
+    const { display_name, email, phone } = editUserForm;
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return toast.error("Email invalide");
+    if (phone && !/^[+0-9 ()-]{6,20}$/.test(phone)) return toast.error("Téléphone invalide");
+    setSavingUser(true);
+    const emailChanged = email !== (emails[editUser.id] ?? "");
+    const { data, error } = await supabase.functions.invoke("admin-users", {
+      body: {
+        action: "update",
+        userId: editUser.id,
+        display_name,
+        phone,
+        ...(emailChanged ? { email } : {}),
+      },
+    });
+    setSavingUser(false);
+    if (error || data?.error) return toast.error(data?.error ?? error?.message ?? "Erreur");
+    toast.success("Utilisateur mis à jour");
+    log("user.update", "user", editUser.id, { display_name, phone, emailChanged });
+    setEditUser(null);
+    loadData();
+  };
+
+  const openResetUser = (p: Profile) => {
+    setResetUser(p);
+    setResetMode("email");
+    setResetPassword("");
+  };
+  const submitResetPassword = async () => {
+    if (!resetUser) return;
+    if (resetMode === "manual" && resetPassword.length < 8) {
+      return toast.error("Mot de passe : 8 caractères minimum");
+    }
+    setResettingPwd(true);
+    const { data, error } = await supabase.functions.invoke("admin-users", {
+      body: {
+        action: "reset_password",
+        userId: resetUser.id,
+        mode: resetMode,
+        ...(resetMode === "manual" ? { new_password: resetPassword } : {}),
+      },
+    });
+    setResettingPwd(false);
+    if (error || data?.error) return toast.error(data?.error ?? error?.message ?? "Erreur");
+    toast.success(resetMode === "email" ? "Email de réinitialisation envoyé" : "Mot de passe réinitialisé");
+    log("user.reset_password", "user", resetUser.id, { mode: resetMode });
+    setResetUser(null);
+  };
+
+
   const updateReport = async (id: string, status: Report["status"]) => {
     const { error } = await supabase.from("reports")
       .update({ status, resolved_by: user?.id, resolved_at: new Date().toISOString() }).eq("id", id);
@@ -423,6 +503,7 @@ const Admin = () => {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Nom</TableHead>
+                      <TableHead>Email</TableHead>
                       <TableHead>Téléphone</TableHead>
                       <TableHead>Statut</TableHead>
                       <TableHead>Rôle</TableHead>
@@ -439,6 +520,7 @@ const Admin = () => {
                           </div>
                           <div className="text-xs text-muted-foreground">{p.city ?? ""}</div>
                         </TableCell>
+                        <TableCell className="text-sm">{emails[p.id] ?? "—"}</TableCell>
                         <TableCell>{p.phone ?? "—"}</TableCell>
                         <TableCell>
                           <Badge variant={p.status === "active" ? "default" : p.status === "suspended" ? "secondary" : "destructive"}>
@@ -450,6 +532,12 @@ const Admin = () => {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1 flex-wrap">
+                            <Button size="sm" variant="outline" onClick={() => openEditUser(p)} title="Modifier" className="gap-1">
+                              <Pencil className="w-3.5 h-3.5" /> Modifier
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => openResetUser(p)} title="Réinitialiser mot de passe" className="gap-1">
+                              <KeyRound className="w-3.5 h-3.5" /> Mot de passe
+                            </Button>
                             <Button size="sm" variant="ghost" onClick={() => toggleVerified(p)} title="Vérifier identité">
                               <BadgeCheck className={`w-4 h-4 ${p.is_verified ? "text-primary" : ""}`} />
                             </Button>
@@ -724,6 +812,74 @@ const Admin = () => {
           <DialogFooter>
             <Button variant="ghost" onClick={() => setRejectDialog(null)}>Annuler</Button>
             <Button variant="destructive" onClick={submitReject} disabled={!rejectReason.trim()}>Refuser</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit user dialog */}
+      <Dialog open={!!editUser} onOpenChange={(o) => !o && setEditUser(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Modifier l'utilisateur</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Nom</Label>
+              <Input value={editUserForm.display_name} onChange={(e) => setEditUserForm({ ...editUserForm, display_name: e.target.value })} />
+            </div>
+            <div>
+              <Label>Email</Label>
+              <Input type="email" value={editUserForm.email} onChange={(e) => setEditUserForm({ ...editUserForm, email: e.target.value })} />
+            </div>
+            <div>
+              <Label>Téléphone</Label>
+              <Input type="tel" value={editUserForm.phone} onChange={(e) => setEditUserForm({ ...editUserForm, phone: e.target.value })} placeholder="+225 ..." />
+            </div>
+            <p className="text-xs text-muted-foreground">Le mot de passe ne s'affiche jamais. Utilisez « Mot de passe » pour le réinitialiser.</p>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setEditUser(null)}>Annuler</Button>
+            <Button variant="gold" onClick={saveEditUser} disabled={savingUser}>
+              {savingUser && <Loader2 className="w-4 h-4 animate-spin mr-1" />}Enregistrer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset password dialog */}
+      <Dialog open={!!resetUser} onOpenChange={(o) => !o && setResetUser(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Réinitialiser le mot de passe</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Pour <span className="font-medium text-foreground">{resetUser?.display_name ?? emails[resetUser?.id ?? ""] ?? "cet utilisateur"}</span>.
+            </p>
+            <div className="flex gap-2">
+              <Button size="sm" variant={resetMode === "email" ? "gold" : "outline"} onClick={() => setResetMode("email")} className="gap-1">
+                <Mail className="w-4 h-4" /> Envoyer un email
+              </Button>
+              <Button size="sm" variant={resetMode === "manual" ? "gold" : "outline"} onClick={() => setResetMode("manual")} className="gap-1">
+                <KeyRound className="w-4 h-4" /> Définir manuellement
+              </Button>
+            </div>
+            {resetMode === "manual" ? (
+              <div>
+                <Label>Nouveau mot de passe (8 car. min.)</Label>
+                <Input type="password" value={resetPassword} onChange={(e) => setResetPassword(e.target.value)} autoComplete="new-password" />
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Un email contenant un lien de réinitialisation sera envoyé à l'adresse de l'utilisateur.
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setResetUser(null)}>Annuler</Button>
+            <Button
+              variant="destructive"
+              onClick={() => { if (confirm("Confirmer la réinitialisation du mot de passe ?")) submitResetPassword(); }}
+              disabled={resettingPwd}
+            >
+              {resettingPwd && <Loader2 className="w-4 h-4 animate-spin mr-1" />}Confirmer
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
