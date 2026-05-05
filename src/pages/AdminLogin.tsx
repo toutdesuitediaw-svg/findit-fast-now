@@ -229,6 +229,16 @@ const AdminLogin = () => {
               {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "Se connecter"}
             </Button>
 
+            <div className="text-right">
+              <button
+                type="button"
+                onClick={() => { setForgotEmail(email); setForgotOpen(true); }}
+                className="text-xs text-[#d4af37]/80 hover:text-[#d4af37] underline-offset-4 hover:underline"
+              >
+                Mot de passe oublié ?
+              </button>
+            </div>
+
             {isLocked && (
               <p className="text-center text-xs text-red-400">
                 Compte temporairement verrouillé. Réessayez plus tard.
