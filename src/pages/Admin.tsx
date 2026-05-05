@@ -503,6 +503,7 @@ const Admin = () => {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Nom</TableHead>
+                      <TableHead>Email</TableHead>
                       <TableHead>Téléphone</TableHead>
                       <TableHead>Statut</TableHead>
                       <TableHead>Rôle</TableHead>
@@ -519,6 +520,7 @@ const Admin = () => {
                           </div>
                           <div className="text-xs text-muted-foreground">{p.city ?? ""}</div>
                         </TableCell>
+                        <TableCell className="text-sm">{emails[p.id] ?? "—"}</TableCell>
                         <TableCell>{p.phone ?? "—"}</TableCell>
                         <TableCell>
                           <Badge variant={p.status === "active" ? "default" : p.status === "suspended" ? "secondary" : "destructive"}>
@@ -530,6 +532,12 @@ const Admin = () => {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1 flex-wrap">
+                            <Button size="sm" variant="outline" onClick={() => openEditUser(p)} title="Modifier" className="gap-1">
+                              <Pencil className="w-3.5 h-3.5" /> Modifier
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => openResetUser(p)} title="Réinitialiser mot de passe" className="gap-1">
+                              <KeyRound className="w-3.5 h-3.5" /> Mot de passe
+                            </Button>
                             <Button size="sm" variant="ghost" onClick={() => toggleVerified(p)} title="Vérifier identité">
                               <BadgeCheck className={`w-4 h-4 ${p.is_verified ? "text-primary" : ""}`} />
                             </Button>
