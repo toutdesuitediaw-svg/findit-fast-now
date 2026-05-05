@@ -172,6 +172,16 @@ const Admin = () => {
     if (sub.data) setSubscriptions(sub.data as Subscription[]);
     if (st.data) setSettings(st.data as SiteSetting[]);
     setLoadingData(false);
+
+    // Fetch emails via secure admin function
+    try {
+      const { data: ed } = await supabase.functions.invoke("admin-users", { body: { action: "list" } });
+      if (ed?.users) {
+        const map: Record<string, string | null> = {};
+        for (const u of ed.users as { id: string; email: string | null }[]) map[u.id] = u.email;
+        setEmails(map);
+      }
+    } catch { /* ignore */ }
   };
 
   useEffect(() => { if (isAdmin) loadData(); }, [isAdmin]);
