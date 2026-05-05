@@ -39,6 +39,9 @@ const AdminLogin = () => {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [lockedUntil, setLockedUntil] = useState<number | null>(null);
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotBusy, setForgotBusy] = useState(false);
   const bootstrapped = useRef(false);
 
   // Ensure default admin exists; function is idempotent when already configured.
