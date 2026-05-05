@@ -121,6 +121,7 @@ const Admin = () => {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [settings, setSettings] = useState<SiteSetting[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+  const [emails, setEmails] = useState<Record<string, string | null>>({});
 
   // Category dialog
   const [catDialog, setCatDialog] = useState(false);
@@ -130,6 +131,17 @@ const Admin = () => {
   // Reject dialog
   const [rejectDialog, setRejectDialog] = useState<Listing | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+
+  // Edit user dialog
+  const [editUser, setEditUser] = useState<Profile | null>(null);
+  const [editUserForm, setEditUserForm] = useState({ display_name: "", email: "", phone: "" });
+  const [savingUser, setSavingUser] = useState(false);
+
+  // Reset password dialog
+  const [resetUser, setResetUser] = useState<Profile | null>(null);
+  const [resetMode, setResetMode] = useState<"email" | "manual">("email");
+  const [resetPassword, setResetPassword] = useState("");
+  const [resettingPwd, setResettingPwd] = useState(false);
 
   useEffect(() => {
     if (authLoading || adminLoading) return;
