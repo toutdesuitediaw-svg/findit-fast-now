@@ -265,6 +265,34 @@ const AdminLogin = () => {
           </button>
         </p>
       </div>
+
+      <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Réinitialiser le mot de passe</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Entrez votre email administrateur. Vous recevrez un lien pour définir un nouveau mot de passe.
+            </p>
+            <div className="space-y-2">
+              <Label htmlFor="forgot-email">Email</Label>
+              <Input
+                id="forgot-email" type="email" autoComplete="email"
+                value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)}
+                placeholder="admin@exemple.com"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setForgotOpen(false)}>Annuler</Button>
+            <Button onClick={submitForgot} disabled={forgotBusy}>
+              {forgotBusy && <Loader2 className="w-4 h-4 animate-spin mr-1" />}
+              Envoyer le lien
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
