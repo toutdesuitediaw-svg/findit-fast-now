@@ -138,6 +138,23 @@ const AdminLogin = () => {
     navigate("/admin", { replace: true });
   };
 
+  const submitForgot = async () => {
+    try {
+      emailSchema.parse(forgotEmail);
+    } catch {
+      return toast.error("Email invalide");
+    }
+    setForgotBusy(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setForgotBusy(false);
+    if (error) return toast.error(error.message);
+    toast.success("Si ce compte existe, un email de réinitialisation a été envoyé.");
+    setForgotOpen(false);
+    setForgotEmail("");
+  };
+
   const isLocked = !!(lockedUntil && lockedUntil > Date.now());
 
   return (
