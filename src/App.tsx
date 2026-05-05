@@ -12,6 +12,7 @@ import ListingDetail from "./pages/ListingDetail.tsx";
 import ListingsPage from "./pages/ListingsPage.tsx";
 import Admin from "./pages/Admin.tsx";
 import AdminLogin from "./pages/AdminLogin.tsx";
+import ResetPassword from "./pages/ResetPassword.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -32,6 +33,7 @@ const App = () => (
             <Route path="/annonce/:id" element={<ListingDetail />} />
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin" element={<Admin />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

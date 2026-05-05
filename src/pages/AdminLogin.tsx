@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
 const emailSchema = z.string().trim().email("Email invalide").max(255);
@@ -38,6 +39,9 @@ const AdminLogin = () => {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [lockedUntil, setLockedUntil] = useState<number | null>(null);
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotBusy, setForgotBusy] = useState(false);
   const bootstrapped = useRef(false);
 
   // Ensure default admin exists; function is idempotent when already configured.
@@ -134,6 +138,23 @@ const AdminLogin = () => {
     navigate("/admin", { replace: true });
   };
 
+  const submitForgot = async () => {
+    try {
+      emailSchema.parse(forgotEmail);
+    } catch {
+      return toast.error("Email invalide");
+    }
+    setForgotBusy(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setForgotBusy(false);
+    if (error) return toast.error(error.message);
+    toast.success("Si ce compte existe, un email de réinitialisation a été envoyé.");
+    setForgotOpen(false);
+    setForgotEmail("");
+  };
+
   const isLocked = !!(lockedUntil && lockedUntil > Date.now());
 
   return (
@@ -208,6 +229,16 @@ const AdminLogin = () => {
               {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "Se connecter"}
             </Button>
 
+            <div className="text-right">
+              <button
+                type="button"
+                onClick={() => { setForgotEmail(email); setForgotOpen(true); }}
+                className="text-xs text-[#d4af37]/80 hover:text-[#d4af37] underline-offset-4 hover:underline"
+              >
+                Mot de passe oublié ?
+              </button>
+            </div>
+
             {isLocked && (
               <p className="text-center text-xs text-red-400">
                 Compte temporairement verrouillé. Réessayez plus tard.
@@ -234,6 +265,34 @@ const AdminLogin = () => {
           </button>
         </p>
       </div>
+
+      <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Réinitialiser le mot de passe</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Entrez votre email administrateur. Vous recevrez un lien pour définir un nouveau mot de passe.
+            </p>
+            <div className="space-y-2">
+              <Label htmlFor="forgot-email">Email</Label>
+              <Input
+                id="forgot-email" type="email" autoComplete="email"
+                value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)}
+                placeholder="admin@exemple.com"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setForgotOpen(false)}>Annuler</Button>
+            <Button onClick={submitForgot} disabled={forgotBusy}>
+              {forgotBusy && <Loader2 className="w-4 h-4 animate-spin mr-1" />}
+              Envoyer le lien
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
