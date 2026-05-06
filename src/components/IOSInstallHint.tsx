@@ -6,6 +6,7 @@ const DISMISS_KEY = "ios-install-hint-dismissed";
 
 const IOSInstallHint = () => {
   const [show, setShow] = useState(false);
+  const [bottomOffset, setBottomOffset] = useState(80);
 
   useEffect(() => {
     const ua = window.navigator.userAgent.toLowerCase();
@@ -21,6 +22,30 @@ const IOSInstallHint = () => {
     }
   }, []);
 
+  useEffect(() => {
+    if (!show) return;
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    const update = () => {
+      // Distance from bottom of layout viewport to bottom of visual viewport
+      const keyboardInset = Math.max(
+        0,
+        window.innerHeight - vv.height - vv.offsetTop
+      );
+      // Keep a 16px breathing room above the keyboard, default 80px otherwise
+      setBottomOffset(keyboardInset > 0 ? keyboardInset + 16 : 80);
+    };
+
+    update();
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+    };
+  }, [show]);
+
   const dismiss = () => {
     localStorage.setItem(DISMISS_KEY, "1");
     setShow(false);
@@ -29,7 +54,10 @@ const IOSInstallHint = () => {
   if (!show) return null;
 
   return (
-    <div className="fixed bottom-20 left-3 right-3 z-50 mx-auto max-w-md rounded-2xl border border-border bg-background/95 p-4 shadow-2xl backdrop-blur-md animate-in slide-in-from-bottom-4">
+    <div
+      style={{ bottom: `${bottomOffset}px` }}
+      className="fixed left-3 right-3 z-50 mx-auto max-w-md rounded-2xl border border-border bg-background/95 p-4 shadow-2xl backdrop-blur-md animate-in slide-in-from-bottom-4 transition-[bottom] duration-200"
+    >
       <button
         onClick={dismiss}
         aria-label="Fermer"
