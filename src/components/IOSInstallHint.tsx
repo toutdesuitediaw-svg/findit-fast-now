@@ -1,48 +1,82 @@
 import { useEffect, useState } from "react";
-import { Share, X, Plus } from "lucide-react";
+import { Share, X, Plus, MoreVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-const DISMISS_KEY = "ios-install-hint-dismissed";
+const DISMISS_KEY = "install-hint-dismissed";
+const DEFAULT_BOTTOM = 80;
+
+type Platform = "ios" | "android" | null;
 
 const IOSInstallHint = () => {
+  const [platform, setPlatform] = useState<Platform>(null);
   const [show, setShow] = useState(false);
-  const [bottomOffset, setBottomOffset] = useState(80);
+  const [bottomOffset, setBottomOffset] = useState(DEFAULT_BOTTOM);
 
   useEffect(() => {
     const ua = window.navigator.userAgent.toLowerCase();
     const isIOS = /iphone|ipad|ipod/.test(ua);
     const isSafari = /safari/.test(ua) && !/crios|fxios|chrome|android/.test(ua);
+    const isAndroid = /android/.test(ua);
     // @ts-ignore
     const isStandalone = window.navigator.standalone || window.matchMedia("(display-mode: standalone)").matches;
     const dismissed = localStorage.getItem(DISMISS_KEY);
 
-    if (isIOS && isSafari && !isStandalone && !dismissed) {
-      const t = setTimeout(() => setShow(true), 1500);
+    if (isStandalone || dismissed) return;
+
+    let detected: Platform = null;
+    if (isIOS && isSafari) detected = "ios";
+    else if (isAndroid) detected = "android";
+
+    if (detected) {
+      const t = setTimeout(() => {
+        setPlatform(detected);
+        setShow(true);
+      }, 1500);
       return () => clearTimeout(t);
     }
   }, []);
 
+  // Keyboard handling for both iOS and Android.
   useEffect(() => {
     if (!show) return;
-    const vv = window.visualViewport;
-    if (!vv) return;
 
-    const update = () => {
-      // Distance from bottom of layout viewport to bottom of visual viewport
-      const keyboardInset = Math.max(
-        0,
-        window.innerHeight - vv.height - vv.offsetTop
-      );
-      // Keep a 16px breathing room above the keyboard, default 80px otherwise
-      setBottomOffset(keyboardInset > 0 ? keyboardInset + 16 : 80);
+    const baseHeight = window.innerHeight;
+
+    const computeOffset = () => {
+      const vv = window.visualViewport;
+      let keyboardInset = 0;
+      if (vv) {
+        keyboardInset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      } else {
+        // Fallback for older Android WebViews: window.innerHeight shrinks when keyboard opens.
+        keyboardInset = Math.max(0, baseHeight - window.innerHeight);
+      }
+      setBottomOffset(keyboardInset > 0 ? keyboardInset + 16 : DEFAULT_BOTTOM);
     };
 
-    update();
-    vv.addEventListener("resize", update);
-    vv.addEventListener("scroll", update);
+    computeOffset();
+
+    const vv = window.visualViewport;
+    if (vv) {
+      vv.addEventListener("resize", computeOffset);
+      vv.addEventListener("scroll", computeOffset);
+    }
+    window.addEventListener("resize", computeOffset);
+
+    // Re-evaluate when an input gains/loses focus (Android quirk).
+    const onFocusIn = () => setTimeout(computeOffset, 250);
+    const onFocusOut = () => setTimeout(computeOffset, 250);
+    window.addEventListener("focusin", onFocusIn);
+    window.addEventListener("focusout", onFocusOut);
+
     return () => {
-      vv.removeEventListener("resize", update);
-      vv.removeEventListener("scroll", update);
+      if (vv) {
+        vv.removeEventListener("resize", computeOffset);
+        vv.removeEventListener("scroll", computeOffset);
+      }
+      window.removeEventListener("resize", computeOffset);
+      window.removeEventListener("focusin", onFocusIn);
+      window.removeEventListener("focusout", onFocusOut);
     };
   }, [show]);
 
@@ -51,7 +85,7 @@ const IOSInstallHint = () => {
     setShow(false);
   };
 
-  if (!show) return null;
+  if (!show || !platform) return null;
 
   return (
     <div
@@ -72,18 +106,32 @@ const IOSInstallHint = () => {
           <p className="mt-1 text-xs text-muted-foreground">
             Ajoutez l'app à votre écran d'accueil pour un accès rapide.
           </p>
-          <ol className="mt-2 space-y-1 text-xs text-foreground">
-            <li className="flex items-center gap-1.5">
-              <span className="font-semibold">1.</span> Touchez
-              <Share className="inline h-4 w-4 text-primary" />
-              <span>en bas de Safari</span>
-            </li>
-            <li className="flex items-center gap-1.5">
-              <span className="font-semibold">2.</span> Choisissez
-              <Plus className="inline h-4 w-4 text-primary" />
-              <span className="font-medium">« Sur l'écran d'accueil »</span>
-            </li>
-          </ol>
+          {platform === "ios" ? (
+            <ol className="mt-2 space-y-1 text-xs text-foreground">
+              <li className="flex items-center gap-1.5">
+                <span className="font-semibold">1.</span> Touchez
+                <Share className="inline h-4 w-4 text-primary" />
+                <span>en bas de Safari</span>
+              </li>
+              <li className="flex items-center gap-1.5">
+                <span className="font-semibold">2.</span> Choisissez
+                <Plus className="inline h-4 w-4 text-primary" />
+                <span className="font-medium">« Sur l'écran d'accueil »</span>
+              </li>
+            </ol>
+          ) : (
+            <ol className="mt-2 space-y-1 text-xs text-foreground">
+              <li className="flex items-center gap-1.5">
+                <span className="font-semibold">1.</span> Touchez
+                <MoreVertical className="inline h-4 w-4 text-primary" />
+                <span>en haut à droite</span>
+              </li>
+              <li className="flex items-center gap-1.5">
+                <span className="font-semibold">2.</span>
+                <span className="font-medium">« Ajouter à l'écran d'accueil »</span>
+              </li>
+            </ol>
+          )}
           <Button size="sm" variant="ghost" className="mt-2 h-7 px-2 text-xs" onClick={dismiss}>
             J'ai compris
           </Button>
