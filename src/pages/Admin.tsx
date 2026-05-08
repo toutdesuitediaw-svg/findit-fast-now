@@ -402,13 +402,22 @@ const Admin = () => {
       return;
     }
     if (!confirm(`Dernière confirmation : supprimer DÉFINITIVEMENT "${label}" ? Cette action est irréversible.`)) return;
-    const { data, error } = await supabase.functions.invoke("admin-users", {
-      body: { action: "delete", userId: p.id },
-    });
-    if (error || data?.error) return toast.error(data?.error ?? error?.message ?? "Erreur");
-    toast.success("Compte supprimé définitivement");
-    log("user.delete", "user", p.id, { display_name: p.display_name });
-    loadData();
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-users", {
+        body: { action: "delete", userId: p.id },
+      });
+      if (error || data?.error) {
+        toast.error(data?.error ?? error?.message ?? "Erreur lors de la suppression");
+      } else {
+        toast.success("Compte supprimé définitivement");
+        log("user.delete", "user", p.id, { display_name: p.display_name });
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erreur inattendue");
+    } finally {
+      // Toujours rafraîchir la liste pour refléter l'état réel (actif/banni/supprimé)
+      await loadData();
+    }
   };
 
 
