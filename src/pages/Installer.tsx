@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Helmet } from "react-helmet-async";
 import { Apple, Share, Plus, Smartphone, MoreVertical, Download, CheckCircle2, Chrome, Home, Zap, Wifi, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
