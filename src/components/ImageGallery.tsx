@@ -36,9 +36,11 @@ const ImageGallery = ({ images, alt, badge, topRight }: ImageGalleryProps) => {
   const touchStartX = useRef<number | null>(null);
   const thumbsRef = useRef<HTMLDivElement>(null);
 
+  const cleaned = useMemo(() => (images ?? []).filter(Boolean), [images]);
+  const overflow = Math.max(0, cleaned.length - MAX_GALLERY_IMAGES);
   const resolved = useMemo(
-    () => (images ?? []).filter(Boolean).map(resolveSrc),
-    [images],
+    () => cleaned.slice(0, MAX_GALLERY_IMAGES).map(resolveSrc),
+    [cleaned],
   );
   const hasImages = resolved.length > 0;
   const total = resolved.length;
