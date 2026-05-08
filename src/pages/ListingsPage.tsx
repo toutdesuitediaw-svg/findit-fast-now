@@ -25,17 +25,30 @@ const ListingsPage = () => {
     supabase.from("categories").select("id, name, slug").order("sort_order").then(({ data }) => setCategories(data ?? []));
   }, []);
 
+  const initializedRef = useRef(false);
+
   useEffect(() => {
     let cancelled = false;
+    initializedRef.current = false;
+
+    const SELECT = "id, title, price, currency, location, images, is_premium, category:categories(slug)";
+
+    const applySort = (rows: any[]) => {
+      if (sort === "price_asc") return [...rows].sort((a, b) => (a.price ?? Infinity) - (b.price ?? Infinity));
+      if (sort === "price_desc") return [...rows].sort((a, b) => (b.price ?? -Infinity) - (a.price ?? -Infinity));
+      return [...rows].sort((a, b) => Number(b.is_premium) - Number(a.is_premium));
+    };
+
+    const matches = (row: any) => {
+      if (!row.is_active) return false;
+      if (q && !String(row.title ?? "").toLowerCase().includes(q.toLowerCase())) return false;
+      if (cat !== "all" && row.category?.slug !== cat) return false;
+      return true;
+    };
 
     const fetchListings = async () => {
-      let query = supabase
-        .from("listings")
-        .select("id, title, price, currency, location, images, is_premium, category:categories(slug)")
-        .eq("is_active", true);
-
+      let query = supabase.from("listings").select(SELECT).eq("is_active", true);
       if (q) query = query.ilike("title", `%${q}%`);
-
       if (sort === "price_asc") query = query.order("price", { ascending: true, nullsFirst: false });
       else if (sort === "price_desc") query = query.order("price", { ascending: false, nullsFirst: false });
       else query = query.order("is_premium", { ascending: false }).order("created_at", { ascending: false });
@@ -46,16 +59,56 @@ const ListingsPage = () => {
       if (cat !== "all") rows = rows.filter((r) => r.category?.slug === cat);
       setListings(rows as ListingCardData[]);
       setLoading(false);
+      initializedRef.current = true;
     };
 
     setLoading(true);
     fetchListings();
 
+    const fetchOne = async (id: string) => {
+      const { data } = await supabase.from("listings").select(SELECT).eq("id", id).maybeSingle();
+      return data as any;
+    };
+
     const channel = supabase
       .channel("public:listings:all")
-      .on("postgres_changes", { event: "*", schema: "public", table: "listings" }, () => {
-        fetchListings();
-      })
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "listings" },
+        async (payload) => {
+          const full = await fetchOne((payload.new as any).id);
+          if (!full || !matches(full)) return;
+          setListings((prev) => {
+            if (prev.some((p) => p.id === full.id)) return prev;
+            return applySort([full, ...prev]).slice(0, 60) as ListingCardData[];
+          });
+          if (initializedRef.current) {
+            toast.success("Nouvelle annonce", { description: full.title });
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "listings" },
+        async (payload) => {
+          const id = (payload.new as any).id;
+          const full = await fetchOne(id);
+          setListings((prev) => {
+            const exists = prev.some((p) => p.id === id);
+            if (!full || !matches(full)) return exists ? prev.filter((p) => p.id !== id) : prev;
+            const next = exists ? prev.map((p) => (p.id === id ? full : p)) : [full, ...prev];
+            return applySort(next).slice(0, 60) as ListingCardData[];
+          });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "listings" },
+        (payload) => {
+          const id = (payload.old as any).id;
+          setListings((prev) => prev.filter((p) => p.id !== id));
+        }
+      )
       .subscribe();
 
     const onFocus = () => fetchListings();
