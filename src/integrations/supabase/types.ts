@@ -116,6 +116,7 @@ export type Database = {
           is_premium: boolean
           location: string | null
           moderation_status: Database["public"]["Enums"]["listing_status"]
+          premium_until: string | null
           price: number | null
           price_type: string | null
           rejection_reason: string | null
@@ -136,6 +137,7 @@ export type Database = {
           is_premium?: boolean
           location?: string | null
           moderation_status?: Database["public"]["Enums"]["listing_status"]
+          premium_until?: string | null
           price?: number | null
           price_type?: string | null
           rejection_reason?: string | null
@@ -156,6 +158,7 @@ export type Database = {
           is_premium?: boolean
           location?: string | null
           moderation_status?: Database["public"]["Enums"]["listing_status"]
+          premium_until?: string | null
           price?: number | null
           price_type?: string | null
           rejection_reason?: string | null
@@ -416,6 +419,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      expire_premium_listings: { Args: never; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

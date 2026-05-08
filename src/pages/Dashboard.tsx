@@ -30,6 +30,7 @@ interface Listing {
   images: string[];
   is_active: boolean;
   is_premium: boolean;
+  premium_until: string | null;
 }
 
 const Dashboard = () => {
@@ -148,6 +149,13 @@ const Dashboard = () => {
                       </div>
                       <p className="text-xs text-muted-foreground">{l.location ?? "—"}</p>
                       <p className="font-bold text-primary">{formatPrice(l)}</p>
+                      {l.is_premium && l.premium_until && (
+                        <p className="text-[11px] text-primary/90 font-medium">
+                          Premium jusqu'au {new Date(l.premium_until).toLocaleDateString("fr-FR", {
+                            day: "2-digit", month: "long", year: "numeric",
+                          })}
+                        </p>
+                      )}
                       <Button variant="ghost" size="sm" onClick={() => deleteListing(l.id)} className="text-destructive hover:text-destructive">
                         <Trash2 className="w-4 h-4" /> Supprimer
                       </Button>
