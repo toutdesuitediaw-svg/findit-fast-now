@@ -1,13 +1,24 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Heart, Loader2, LogOut, Plus, Trash2 } from "lucide-react";
+import { Heart, Loader2, LogOut, Plus, Trash2, Flag } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { toast } from "sonner";
+
+interface Report {
+  id: string;
+  reason: string;
+  details: string | null;
+  status: string;
+  target_type: string;
+  target_id: string;
+  created_at: string;
+}
 
 interface Listing {
   id: string;
@@ -25,6 +36,7 @@ const Dashboard = () => {
   const { user, loading, signOut } = useAuth();
   const [myListings, setMyListings] = useState<Listing[]>([]);
   const [favorites, setFavorites] = useState<Listing[]>([]);
+  const [reports, setReports] = useState<Report[]>([]);
   const [profile, setProfile] = useState<{ display_name: string | null } | null>(null);
   const [busy, setBusy] = useState(true);
 
@@ -36,14 +48,16 @@ const Dashboard = () => {
     if (!user) return;
     const load = async () => {
       setBusy(true);
-      const [{ data: l }, { data: f }, { data: p }] = await Promise.all([
+      const [{ data: l }, { data: f }, { data: p }, { data: r }] = await Promise.all([
         supabase.from("listings").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
         supabase.from("favorites").select("listing:listings(*)").eq("user_id", user.id),
         supabase.from("profiles").select("display_name").eq("id", user.id).maybeSingle(),
+        supabase.from("reports").select("*").eq("reporter_id", user.id).order("created_at", { ascending: false }),
       ]);
       setMyListings((l ?? []) as Listing[]);
       setFavorites(((f ?? []).map((x: any) => x.listing).filter(Boolean)) as Listing[]);
       setProfile(p);
+      setReports((r ?? []) as Report[]);
       setBusy(false);
     };
     load();
@@ -99,6 +113,7 @@ const Dashboard = () => {
           <TabsList>
             <TabsTrigger value="listings">Mes annonces ({myListings.length})</TabsTrigger>
             <TabsTrigger value="favorites">Favoris ({favorites.length})</TabsTrigger>
+            <TabsTrigger value="reports">Mes signalements ({reports.length})</TabsTrigger>
           </TabsList>
 
           <TabsContent value="listings" className="mt-6">
@@ -150,6 +165,39 @@ const Dashboard = () => {
                       <Button variant="ghost" size="sm" onClick={() => removeFavorite(l.id)}>
                         <Heart className="w-4 h-4 fill-primary text-primary" /> Retirer
                       </Button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="reports" className="mt-6">
+            {reports.length === 0 ? (
+              <EmptyState message="Aucun signalement envoyé" cta="Parcourir les annonces" onCta={() => navigate("/")} />
+            ) : (
+              <div className="space-y-3">
+                {reports.map((r) => (
+                  <article key={r.id} className="rounded-xl bg-card border border-border p-4 flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
+                    <div className="flex items-start gap-3 flex-1">
+                      <Flag className="w-4 h-4 text-destructive mt-1 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="font-medium line-clamp-1">{r.reason}</p>
+                        {r.details && <p className="text-sm text-muted-foreground line-clamp-2">{r.details}</p>}
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {new Date(r.created_at).toLocaleDateString("fr-FR")} · {r.target_type}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={r.status === "open" ? "default" : r.status === "resolved" ? "secondary" : "outline"}>
+                        {r.status === "open" ? "En cours" : r.status === "resolved" ? "Résolu" : r.status}
+                      </Badge>
+                      {r.target_type === "listing" && (
+                        <Button variant="ghost" size="sm" onClick={() => navigate(`/annonce/${r.target_id}`)}>
+                          Voir
+                        </Button>
+                      )}
                     </div>
                   </article>
                 ))}
