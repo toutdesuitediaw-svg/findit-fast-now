@@ -272,9 +272,38 @@ const PublishListing = () => {
 
                   {/* Status overlay */}
                   {(p.status === "uploading" || p.status === "pending") && (
-                    <div className="absolute inset-0 bg-background/55 backdrop-blur-[1px] flex flex-col items-center justify-center gap-1 text-xs font-medium">
+                    <div className="absolute inset-0 bg-background/65 backdrop-blur-[1px] flex flex-col items-center justify-center gap-1 text-xs font-medium px-2 text-center">
                       <Loader2 className="w-5 h-5 animate-spin text-primary" />
                       <span>{p.status === "pending" ? "En attente…" : "Envoi…"}</span>
+                      {p.status === "uploading" && (
+                        <div className="flex items-center gap-2 mt-1">
+                          <button
+                            type="button"
+                            onClick={() => cancelUpload(p.id, "keep")}
+                            className="inline-flex items-center gap-1 text-[10px] font-semibold text-foreground/80 hover:text-destructive underline underline-offset-2"
+                            aria-label="Annuler l'envoi"
+                          >
+                            <X className="w-3 h-3" /> Annuler
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => cancelUpload(p.id, "remove")}
+                            className="inline-flex items-center gap-1 text-[10px] font-semibold text-foreground/80 hover:text-destructive underline underline-offset-2"
+                            aria-label="Annuler et retirer la photo"
+                          >
+                            <Trash2 className="w-3 h-3" /> Retirer
+                          </button>
+                        </div>
+                      )}
+                      {p.status === "pending" && (
+                        <button
+                          type="button"
+                          onClick={() => retryUpload(p.id)}
+                          className="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold underline underline-offset-2"
+                        >
+                          <RotateCw className="w-3 h-3" /> Démarrer
+                        </button>
+                      )}
                     </div>
                   )}
                   {p.status === "error" && (
