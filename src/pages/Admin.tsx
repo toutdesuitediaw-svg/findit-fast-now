@@ -785,14 +785,17 @@ const Admin = () => {
 
           {/* === SETTINGS === */}
           <TabsContent value="settings">
-            <Card className="p-4">
-              <h3 className="font-semibold mb-4">Paramètres du site</h3>
-              <div className="space-y-4">
-                {settings.map(s => (
-                  <SettingRow key={s.key} setting={s} onSave={updateSetting} />
-                ))}
-              </div>
-            </Card>
+            <div className="grid gap-4 md:grid-cols-2">
+              <Card className="p-4">
+                <h3 className="font-semibold mb-4">Paramètres du site</h3>
+                <div className="space-y-4">
+                  {settings.map(s => (
+                    <SettingRow key={s.key} setting={s} onSave={updateSetting} />
+                  ))}
+                </div>
+              </Card>
+              <ChangeAdminPasswordCard />
+            </div>
           </TabsContent>
         </Tabs>
       </main>
