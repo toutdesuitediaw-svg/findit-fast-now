@@ -246,6 +246,85 @@ const Profile = () => {
             </Button>
           </div>
         </form>
+
+        <div className="mt-10 bg-card border border-destructive/40 rounded-2xl p-6">
+          <div className="flex items-start gap-3 mb-3">
+            <AlertTriangle className="w-5 h-5 text-destructive mt-0.5" />
+            <div>
+              <h2 className="font-display text-xl font-bold text-destructive">Zone dangereuse</h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                La suppression de votre compte est <strong>définitive</strong>. Vos annonces, messages
+                et favoris seront effacés et ne pourront pas être récupérés.
+              </p>
+            </div>
+          </div>
+
+          <AlertDialog
+            onOpenChange={(open) => {
+              if (!open) {
+                setConfirmText("");
+                setConfirmEmail("");
+              }
+            }}
+          >
+            <AlertDialogTrigger asChild>
+              <Button type="button" variant="destructive" className="mt-2">
+                <Trash2 className="w-4 h-4" />
+                Supprimer mon compte
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Cette action est <strong>irréversible</strong>. Pour confirmer, saisissez votre email
+                  et tapez <strong>SUPPRIMER</strong> en majuscules.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label htmlFor="confirm_email">Votre email</Label>
+                  <Input
+                    id="confirm_email"
+                    type="email"
+                    placeholder={user.email ?? ""}
+                    value={confirmEmail}
+                    onChange={(e) => setConfirmEmail(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirm_text">Tapez SUPPRIMER</Label>
+                  <Input
+                    id="confirm_text"
+                    value={confirmText}
+                    onChange={(e) => setConfirmText(e.target.value)}
+                    placeholder="SUPPRIMER"
+                  />
+                </div>
+              </div>
+
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={deleting}>Annuler</AlertDialogCancel>
+                <AlertDialogAction
+                  disabled={
+                    deleting ||
+                    confirmText !== "SUPPRIMER" ||
+                    confirmEmail.trim().toLowerCase() !== (user.email ?? "").toLowerCase()
+                  }
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onDeleteAccount();
+                  }}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                  Supprimer définitivement
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       </main>
       <Footer />
     </div>
