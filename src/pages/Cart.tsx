@@ -143,19 +143,30 @@ const Cart = () => {
   const contactSeller = (group: SellerGroup) => {
     const orderNumber = `CMD-${Date.now().toString(36).toUpperCase()}`;
     window.open(waLink(group, orderNumber), "_blank", "noopener,noreferrer");
+    setContactedSellers((prev) => new Set(prev).add(group.sellerId));
   };
 
   const finishMultiSeller = () => {
+    if (!groups) return;
+    const selected = groups.filter((g) => selectedSellers.has(g.sellerId));
+    if (selected.length === 0) {
+      toast.error("Sélectionnez au moins un vendeur");
+      return;
+    }
+    const selectedItemIds = new Set(selected.flatMap((g) => g.items.map((i) => i.id)));
+    const orderItems = items.filter((i) => selectedItemIds.has(i.id));
+    const orderTotal = orderItems.reduce((s, i) => s + i.price * i.quantity, 0);
+
     const orderNumber = `CMD-${Date.now().toString(36).toUpperCase()}`;
     const order = {
       orderNumber,
-      items: [...items],
-      total,
+      items: orderItems,
+      total: orderTotal,
       currency,
       date: new Date().toISOString(),
     };
     setGroups(null);
-    clear();
+    selectedItemIds.forEach((id) => removeItem(id));
     navigate("/commande/confirmation", { state: order });
   };
 
