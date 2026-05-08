@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Share, X, Plus, MoreVertical } from "lucide-react";
+import { Share, X, Plus, MoreVertical, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const DISMISS_KEY = "install-hint-dismissed";
@@ -7,10 +7,16 @@ const DEFAULT_BOTTOM = 80;
 
 type Platform = "ios" | "android" | null;
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+}
+
 const IOSInstallHint = () => {
   const [platform, setPlatform] = useState<Platform>(null);
   const [show, setShow] = useState(false);
   const [bottomOffset, setBottomOffset] = useState(DEFAULT_BOTTOM);
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
     const ua = window.navigator.userAgent.toLowerCase();
@@ -27,13 +33,28 @@ const IOSInstallHint = () => {
     if (isIOS && isSafari) detected = "ios";
     else if (isAndroid) detected = "android";
 
+    // Capture the Android/Chrome native install prompt
+    const onBeforeInstall = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
+      setPlatform("android");
+      setShow(true);
+    };
+    window.addEventListener("beforeinstallprompt", onBeforeInstall);
+
+    // Fallback: still show iOS hint (no beforeinstallprompt on iOS)
+    let t: ReturnType<typeof setTimeout> | undefined;
     if (detected) {
-      const t = setTimeout(() => {
-        setPlatform(detected);
+      t = setTimeout(() => {
+        setPlatform((p) => p ?? detected);
         setShow(true);
       }, 1500);
-      return () => clearTimeout(t);
     }
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", onBeforeInstall);
+      if (t) clearTimeout(t);
+    };
   }, []);
 
   // Keyboard handling for both iOS and Android.
