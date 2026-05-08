@@ -163,6 +163,32 @@ const ListingDetail = () => {
     navigate("/panier");
   };
 
+  useSEO({
+    title: listing ? `${listing.title} — ${listing.location ?? "Sénégal"} | TOUT DE SUITE` : "Annonce | TOUT DE SUITE",
+    description: listing
+      ? `${listing.description?.slice(0, 155) ?? listing.title} — Petite annonce ${listing.category?.name ?? ""} ${listing.location ?? "au Sénégal"}.`
+      : "Détail d'une petite annonce sur TOUT DE SUITE.",
+    canonical: id ? `${SITE_URL}/annonce/${id}` : undefined,
+    image: listing?.images?.[0],
+    jsonLd: listing
+      ? {
+          "@context": "https://schema.org",
+          "@type": "Product",
+          name: listing.title,
+          description: listing.description,
+          image: listing.images,
+          category: listing.category?.name,
+          offers: {
+            "@type": "Offer",
+            priceCurrency: listing.currency,
+            price: listing.price ?? 0,
+            availability: "https://schema.org/InStock",
+            areaServed: listing.location ?? "Sénégal",
+          },
+        }
+      : undefined,
+  });
+
   if (loading || !listing) {
     return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>;
   }
