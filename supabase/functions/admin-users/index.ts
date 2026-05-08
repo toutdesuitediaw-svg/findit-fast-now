@@ -148,10 +148,14 @@ Deno.serve(async (req) => {
       await admin.from("favorites").delete().eq("user_id", userId);
       await admin.from("messages").delete().or(`sender_id.eq.${userId},recipient_id.eq.${userId}`);
       await admin.from("listings").delete().eq("user_id", userId);
+      await admin.from("transactions").delete().eq("user_id", userId);
+      await admin.from("subscriptions").delete().eq("user_id", userId);
+      await admin.from("reports").delete().or(`reporter_id.eq.${userId},resolved_by.eq.${userId}`);
       await admin.from("user_roles").delete().eq("user_id", userId);
       await admin.from("profiles").delete().eq("id", userId);
 
-      const { error } = await admin.auth.admin.deleteUser(userId);
+      // Hard delete (shouldSoftDelete = false) — suppression définitive de l'auth user
+      const { error } = await admin.auth.admin.deleteUser(userId, false);
       if (error) return json({ error: error.message }, 400);
       return json({ success: true });
     }
