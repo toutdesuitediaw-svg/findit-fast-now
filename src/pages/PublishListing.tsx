@@ -194,11 +194,14 @@ const PublishListing = () => {
     return true;
   };
 
-  const publishListing = async () => {
+  const publishListing = async (premiumRequested: boolean) => {
     if (!user) return;
     setBusy(true);
     const uploadedUrls = photos.map((p) => p.url!).filter(Boolean);
 
+    // Premium is NEVER activated at publish time. It is only activated
+    // by an admin once the payment is confirmed. Until then, the listing
+    // is published as a standard ad.
     const { data: inserted, error } = await supabase
       .from("listings")
       .insert({
@@ -209,14 +212,39 @@ const PublishListing = () => {
         location: form.location.trim() || null,
         category_id: form.category_id,
         images: uploadedUrls,
-        is_premium: form.is_premium,
+        is_premium: false,
       })
       .select()
       .single();
 
-    setBusy(false);
-    if (error) return toast.error(error.message);
-    toast.success(form.is_premium ? "Annonce Premium publiée !" : "Annonce publiée !");
+    if (error) {
+      setBusy(false);
+      return toast.error(error.message);
+    }
+
+    if (premiumRequested) {
+      const { error: txErr } = await supabase.from("transactions").insert({
+        user_id: user.id,
+        listing_id: inserted.id,
+        amount: PREMIUM_PRICE_FCFA,
+        currency: "FCFA",
+        type: "listing_boost",
+        status: "pending",
+        metadata: { duration_days: PREMIUM_DURATION_DAYS },
+      });
+      setBusy(false);
+      if (txErr) {
+        toast.warning("Annonce publiée. Demande Premium non enregistrée : " + txErr.message);
+      } else {
+        toast.success(
+          `Annonce publiée ! Le Premium s'activera après confirmation du paiement (${PREMIUM_PRICE_FCFA.toLocaleString("fr-FR")} FCFA).`,
+        );
+      }
+    } else {
+      setBusy(false);
+      toast.success("Annonce publiée !");
+    }
+
     navigate(`/annonce/${inserted.id}`);
   };
 
@@ -228,7 +256,7 @@ const PublishListing = () => {
       setConfirmPremiumOpen(true);
       return;
     }
-    await publishListing();
+    await publishListing(false);
   };
 
   if (authLoading || !user) {
@@ -479,8 +507,9 @@ const PublishListing = () => {
                     </ul>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Le paiement vous sera demandé après publication. Vous pouvez aussi désactiver
-                    l'option pour publier gratuitement.
+                    Votre annonce sera publiée immédiatement en standard. Le badge Premium
+                    et la mise en avant seront activés <strong>uniquement après confirmation
+                    du paiement</strong>. Vous pouvez aussi publier sans Premium.
                   </p>
                 </div>
               </AlertDialogDescription>
@@ -493,7 +522,7 @@ const PublishListing = () => {
                 onClick={async () => {
                   setForm((f) => ({ ...f, is_premium: false }));
                   setConfirmPremiumOpen(false);
-                  await publishListing();
+                  await publishListing(false);
                 }}
               >
                 Publier sans Premium
@@ -503,7 +532,7 @@ const PublishListing = () => {
                 onClick={async (e) => {
                   e.preventDefault();
                   setConfirmPremiumOpen(false);
-                  await publishListing();
+                  await publishListing(true);
                 }}
               >
                 {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Star className="w-4 h-4" />}
