@@ -35,6 +35,7 @@ interface SellerMeta {
 const Cart = () => {
   const navigate = useNavigate();
   const { items, updateQuantity, removeItem, clear, total, count, currency } = useCart();
+  const { user, loading: authLoading } = useAuth();
   const fmt = (n: number) => `${Number(n).toLocaleString("fr-FR")} ${currency}`;
 
   const handleQtyChange = (id: string, qty: number) => {
