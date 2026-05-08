@@ -15,9 +15,17 @@ const Cart = () => {
 
   const checkout = () => {
     if (items.length === 0) return;
-    toast.success("Commande validée ! Nous vous contactons sous peu.");
+    const orderNumber = `CMD-${Date.now().toString(36).toUpperCase()}-${Math.floor(Math.random() * 1000).toString().padStart(3, "0")}`;
+    const order = {
+      orderNumber,
+      items: [...items],
+      total,
+      currency,
+      date: new Date().toISOString(),
+    };
+    toast.success("Commande validée !");
     clear();
-    navigate("/");
+    navigate("/commande/confirmation", { state: order });
   };
 
   return (
