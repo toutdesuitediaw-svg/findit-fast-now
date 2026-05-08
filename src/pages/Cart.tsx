@@ -262,11 +262,53 @@ const Cart = () => {
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
       <main className="flex-1 container mx-auto px-4 py-10">
-        <div className="flex items-center gap-3 mb-8">
+        <div className="flex items-center gap-3 mb-4">
           <ShoppingCart className="w-7 h-7 text-primary" />
           <h1 className="font-display text-3xl md:text-4xl font-bold">
             Mon <span className="text-gradient-gold">panier</span>
           </h1>
+        </div>
+
+        <div
+          className={`mb-8 flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 ${
+            user
+              ? "border-primary/30 bg-primary/5"
+              : "border-destructive/30 bg-destructive/5"
+          }`}
+          aria-live="polite"
+        >
+          <div className="flex items-center gap-2 text-sm">
+            {authLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                <span className="text-muted-foreground">Vérification de la session…</span>
+              </>
+            ) : user ? (
+              <>
+                <UserCheck className="w-4 h-4 text-primary" />
+                <span>
+                  Connecté en tant que{" "}
+                  <span className="font-semibold">{user.email}</span>
+                </span>
+              </>
+            ) : (
+              <>
+                <UserX className="w-4 h-4 text-destructive" />
+                <span className="text-destructive font-medium">
+                  Non connecté — connectez-vous pour valider la commande
+                </span>
+              </>
+            )}
+          </div>
+          {!authLoading && !user && (
+            <Button
+              variant="gold"
+              size="sm"
+              onClick={() => navigate(`/auth?redirect=${encodeURIComponent("/panier")}`)}
+            >
+              <LogIn className="w-4 h-4" /> Se connecter
+            </Button>
+          )}
         </div>
 
         {items.length === 0 ? (
