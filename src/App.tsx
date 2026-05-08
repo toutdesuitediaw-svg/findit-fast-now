@@ -16,6 +16,7 @@ import ResetPassword from "./pages/ResetPassword.tsx";
 import Cart from "./pages/Cart.tsx";
 import OrderConfirmation from "./pages/OrderConfirmation.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import RequireAuth from "./components/RequireAuth.tsx";
 
 const queryClient = new QueryClient();
 
