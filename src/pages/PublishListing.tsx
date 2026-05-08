@@ -79,12 +79,20 @@ const PublishListing = () => {
 
   const uploadPhoto = async (id: string, file: File) => {
     if (!user) return;
+    cancelledRef.current.delete(id);
     setPhotos((prev) =>
       prev.map((p) => (p.id === id ? { ...p, status: "uploading", error: undefined } : p)),
     );
     const ext = file.name.split(".").pop();
     const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
     const { error } = await supabase.storage.from("listing-photos").upload(path, file);
+    // If user cancelled while upload was in flight, ignore the result
+    if (cancelledRef.current.has(id)) {
+      cancelledRef.current.delete(id);
+      // Best-effort cleanup if it actually got uploaded
+      if (!error) supabase.storage.from("listing-photos").remove([path]).catch(() => {});
+      return;
+    }
     if (error) {
       setPhotos((prev) =>
         prev.map((p) => (p.id === id ? { ...p, status: "error", error: error.message } : p)),
@@ -94,6 +102,19 @@ const PublishListing = () => {
     const { data } = supabase.storage.from("listing-photos").getPublicUrl(path);
     setPhotos((prev) =>
       prev.map((p) => (p.id === id ? { ...p, status: "done", url: data.publicUrl } : p)),
+    );
+  };
+
+  const cancelUpload = (id: string, mode: "keep" | "remove" = "keep") => {
+    cancelledRef.current.add(id);
+    if (mode === "remove") {
+      removeFile(id);
+      return;
+    }
+    setPhotos((prev) =>
+      prev.map((p) =>
+        p.id === id ? { ...p, status: "pending", error: undefined, url: undefined } : p,
+      ),
     );
   };
 
