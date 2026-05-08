@@ -272,22 +272,39 @@ const Cart = () => {
                     </h3>
                     <p className="text-primary font-bold mt-1">{fmt(item.price)}</p>
                   </div>
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1 border border-border rounded-lg p-0.5">
                     <Button
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8"
                       onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                      disabled={item.quantity <= 1}
                       aria-label="Diminuer"
                     >
                       <Minus className="w-3.5 h-3.5" />
                     </Button>
-                    <span className="w-7 text-center font-medium">{item.quantity}</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={99}
+                      value={item.quantity}
+                      onChange={(e) => {
+                        const v = parseInt(e.target.value, 10);
+                        if (Number.isNaN(v)) return;
+                        updateQuantity(item.id, Math.min(99, Math.max(1, v)));
+                      }}
+                      onBlur={(e) => {
+                        if (!e.target.value) updateQuantity(item.id, 1);
+                      }}
+                      aria-label="Quantité"
+                      className="w-12 h-8 text-center text-sm font-medium bg-transparent outline-none focus:ring-2 focus:ring-primary/40 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
                     <Button
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8"
-                      onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                      onClick={() => updateQuantity(item.id, Math.min(99, item.quantity + 1))}
+                      disabled={item.quantity >= 99}
                       aria-label="Augmenter"
                     >
                       <Plus className="w-3.5 h-3.5" />
