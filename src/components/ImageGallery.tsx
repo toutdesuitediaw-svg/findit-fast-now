@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Maximize2, X, ZoomIn, ZoomOut } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight, ImageOff, Maximize2, X, ZoomIn, ZoomOut } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ImageGalleryProps {
   images: string[];
@@ -9,6 +10,22 @@ interface ImageGalleryProps {
   badge?: React.ReactNode;
   topRight?: React.ReactNode;
 }
+
+const FALLBACK = "/placeholder.svg";
+
+const resolveSrc = (src: string): string => {
+  if (!src) return FALLBACK;
+  if (/^(https?:|data:|blob:)/i.test(src) || src.startsWith("/")) return src;
+  const { data } = supabase.storage.from("listing-photos").getPublicUrl(src);
+  return data.publicUrl || FALLBACK;
+};
+
+const handleImgError = (e: React.SyntheticEvent<HTMLImageElement>) => {
+  const img = e.currentTarget;
+  if (img.src.endsWith(FALLBACK)) return;
+  img.src = FALLBACK;
+  img.classList.add("opacity-60");
+};
 
 const ImageGallery = ({ images, alt, badge, topRight }: ImageGalleryProps) => {
   const [active, setActive] = useState(0);
@@ -18,8 +35,12 @@ const ImageGallery = ({ images, alt, badge, topRight }: ImageGalleryProps) => {
   const touchStartX = useRef<number | null>(null);
   const thumbsRef = useRef<HTMLDivElement>(null);
 
-  const hasImages = images && images.length > 0;
-  const total = images?.length ?? 0;
+  const resolved = useMemo(
+    () => (images ?? []).filter(Boolean).map(resolveSrc),
+    [images],
+  );
+  const hasImages = resolved.length > 0;
+  const total = resolved.length;
 
   const go = useCallback(
     (dir: 1 | -1) => {
