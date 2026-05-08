@@ -53,6 +53,7 @@ const App = () => (
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/panier" element={<RequireAuth><Cart /></RequireAuth>} />
               <Route path="/commande/confirmation" element={<OrderConfirmation />} />
+              <Route path="/installer" element={<Installer />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
