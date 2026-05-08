@@ -98,18 +98,20 @@ const ImageGallery = ({ images, alt, badge, topRight }: ImageGalleryProps) => {
       >
         {hasImages ? (
           <img
-            src={images[active]}
+            src={resolved[active]}
             alt={`${alt} — photo ${active + 1}`}
             className="w-full h-full object-cover cursor-zoom-in transition-transform duration-500 group-hover:scale-[1.02]"
             onClick={() => {
               setZoom(1);
               setOpen(true);
             }}
+            onError={handleImgError}
             loading="eager"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-            Pas de photo
+          <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-muted-foreground">
+            <ImageOff className="w-8 h-8" />
+            <span className="text-sm">Pas de photo</span>
           </div>
         )}
 
