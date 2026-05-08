@@ -23,6 +23,7 @@ interface ListingDetail {
   location: string | null;
   images: string[];
   is_premium: boolean;
+  premium_until: string | null;
   created_at: string;
   user_id: string;
   category: { name: string } | null;
