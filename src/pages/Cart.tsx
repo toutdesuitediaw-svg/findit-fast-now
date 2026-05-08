@@ -207,7 +207,7 @@ const Cart = () => {
       currency,
       date: new Date().toISOString(),
     };
-    setGroups(null);
+    setDialogOpen(false);
     selectedItemIds.forEach((id) => removeItem(id));
     navigate("/commande/confirmation", { state: order });
   };
@@ -333,7 +333,7 @@ const Cart = () => {
       </main>
       <Footer />
 
-      <Dialog open={!!groups} onOpenChange={(o) => !o && setGroups(null)}>
+      <Dialog open={dialogOpen} onOpenChange={(o) => !o && setDialogOpen(false)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Sélectionnez les vendeurs à contacter</DialogTitle>
@@ -349,20 +349,20 @@ const Cart = () => {
               type="button"
               className="hover:text-primary underline"
               onClick={() => {
-                const allReachable = groups?.filter((g) => g.whatsapp).map((g) => g.sellerId) ?? [];
+                const allReachable = groups.filter((g) => g.whatsapp).map((g) => g.sellerId) ?? [];
                 setSelectedSellers(
                   selectedSellers.size === allReachable.length ? new Set() : new Set(allReachable)
                 );
               }}
             >
-              {selectedSellers.size === groups?.filter((g) => g.whatsapp).length
+              {selectedSellers.size === groups.filter((g) => g.whatsapp).length
                 ? "Tout désélectionner"
                 : "Tout sélectionner"}
             </button>
           </div>
 
           <div className="space-y-2 max-h-[50vh] overflow-y-auto">
-            {groups?.map((g) => {
+            {groups.map((g) => {
               const checked = selectedSellers.has(g.sellerId);
               const contacted = contactedSellers.has(g.sellerId);
               return (
@@ -412,7 +412,7 @@ const Cart = () => {
           </div>
 
           {(() => {
-            const selected = groups?.filter((g) => selectedSellers.has(g.sellerId)) ?? [];
+            const selected = groups.filter((g) => selectedSellers.has(g.sellerId)) ?? [];
             const itemCount = selected.reduce(
               (s, g) => s + g.items.reduce((n, i) => n + i.quantity, 0),
               0
@@ -436,7 +436,7 @@ const Cart = () => {
             );
           })()}
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setGroups(null)}>
+            <Button variant="ghost" onClick={() => setDialogOpen(false)}>
               Annuler
             </Button>
             <Button
