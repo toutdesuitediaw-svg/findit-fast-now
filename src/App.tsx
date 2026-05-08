@@ -22,6 +22,7 @@ const ResetPassword = lazy(() => import("./pages/ResetPassword.tsx"));
 const Cart = lazy(() => import("./pages/Cart.tsx"));
 const OrderConfirmation = lazy(() => import("./pages/OrderConfirmation.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
+const Installer = lazy(() => import("./pages/Installer.tsx"));
 
 const queryClient = new QueryClient();
 
@@ -52,6 +53,7 @@ const App = () => (
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/panier" element={<RequireAuth><Cart /></RequireAuth>} />
               <Route path="/commande/confirmation" element={<OrderConfirmation />} />
+              <Route path="/installer" element={<Installer />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
