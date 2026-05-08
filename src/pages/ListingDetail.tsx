@@ -199,6 +199,10 @@ const ListingDetail = () => {
                 {listing.seller?.city && <p className="text-xs text-muted-foreground">{listing.seller.city}</p>}
               </div>
 
+              <Button variant="gold" className="w-full" onClick={handleOrder}>
+                <ShoppingCart className="w-4 h-4" /> Commander
+              </Button>
+
               {waNumber ? (
                 <>
                   <Button variant="gold" className="w-full" asChild>
