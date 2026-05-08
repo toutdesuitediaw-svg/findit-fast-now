@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { trackPwaEvent } from "@/lib/pwaAnalytics";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
