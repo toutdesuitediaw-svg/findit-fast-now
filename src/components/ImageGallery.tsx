@@ -186,6 +186,12 @@ const ImageGallery = ({ images, alt, badge, topRight }: ImageGalleryProps) => {
         </div>
       )}
 
+      {overflow > 0 && (
+        <p className="mt-2 text-xs text-muted-foreground">
+          Affichage limité aux {MAX_GALLERY_IMAGES} premières photos ({overflow} de plus non affichée{overflow > 1 ? "s" : ""}).
+        </p>
+      )}
+
       {/* Lightbox */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-[100vw] w-screen h-screen sm:rounded-none border-0 p-0 bg-background/98 backdrop-blur-xl flex flex-col gap-0">
