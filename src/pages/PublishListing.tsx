@@ -16,8 +16,8 @@ import { toast } from "sonner";
 import { MAX_GALLERY_IMAGES } from "@/components/ImageGallery";
 
 const schema = z.object({
-  title: z.string().trim().min(5, "Au moins 5 caractères").max(120),
-  description: z.string().trim().min(20, "Au moins 20 caractères").max(2000),
+  title: z.string().trim().min(3, "Au moins 3 caractères").max(120),
+  description: z.string().trim().min(10, "Au moins 10 caractères").max(2000),
   price: z.string().optional(),
   location: z.string().trim().max(100).optional(),
   category_id: z.string().uuid("Choisissez une catégorie"),
