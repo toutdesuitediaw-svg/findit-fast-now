@@ -25,6 +25,16 @@ const schema = z.object({
 
 interface Category { id: string; name: string; }
 
+type UploadStatus = "pending" | "uploading" | "done" | "error";
+interface PhotoItem {
+  id: string;
+  file: File;
+  preview: string;
+  status: UploadStatus;
+  url?: string;
+  error?: string;
+}
+
 const PublishListing = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
