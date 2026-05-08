@@ -12,6 +12,7 @@ interface ImageGalleryProps {
 }
 
 const FALLBACK = "/placeholder.svg";
+export const MAX_GALLERY_IMAGES = 8;
 
 const resolveSrc = (src: string): string => {
   if (!src) return FALLBACK;
@@ -35,9 +36,11 @@ const ImageGallery = ({ images, alt, badge, topRight }: ImageGalleryProps) => {
   const touchStartX = useRef<number | null>(null);
   const thumbsRef = useRef<HTMLDivElement>(null);
 
+  const cleaned = useMemo(() => (images ?? []).filter(Boolean), [images]);
+  const overflow = Math.max(0, cleaned.length - MAX_GALLERY_IMAGES);
   const resolved = useMemo(
-    () => (images ?? []).filter(Boolean).map(resolveSrc),
-    [images],
+    () => cleaned.slice(0, MAX_GALLERY_IMAGES).map(resolveSrc),
+    [cleaned],
   );
   const hasImages = resolved.length > 0;
   const total = resolved.length;
@@ -181,6 +184,12 @@ const ImageGallery = ({ images, alt, badge, topRight }: ImageGalleryProps) => {
             </button>
           ))}
         </div>
+      )}
+
+      {overflow > 0 && (
+        <p className="mt-2 text-xs text-muted-foreground">
+          Affichage limité aux {MAX_GALLERY_IMAGES} premières photos ({overflow} de plus non affichée{overflow > 1 ? "s" : ""}).
+        </p>
       )}
 
       {/* Lightbox */}

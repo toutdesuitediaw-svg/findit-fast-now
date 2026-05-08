@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { toast } from "sonner";
+import { MAX_GALLERY_IMAGES } from "@/components/ImageGallery";
 
 const schema = z.object({
   title: z.string().trim().min(5, "Au moins 5 caractères").max(120),
@@ -62,7 +63,12 @@ const PublishListing = () => {
   }, []);
 
   const handleFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selected = Array.from(e.target.files ?? []).slice(0, 8 - files.length);
+    const remaining = MAX_GALLERY_IMAGES - files.length;
+    const incoming = Array.from(e.target.files ?? []);
+    if (incoming.length > remaining) {
+      toast.error(`Maximum ${MAX_GALLERY_IMAGES} photos par annonce.`);
+    }
+    const selected = incoming.slice(0, Math.max(0, remaining));
     const valid = selected.filter((f) => f.size <= 5 * 1024 * 1024 && f.type.startsWith("image/"));
     if (valid.length < selected.length) toast.error("Certaines images ont été ignorées (max 5MB, images uniquement)");
     setFiles((p) => [...p, ...valid]);
