@@ -30,6 +30,7 @@ interface Listing {
   images: string[];
   is_active: boolean;
   is_premium: boolean;
+  premium_until: string | null;
 }
 
 const Dashboard = () => {
