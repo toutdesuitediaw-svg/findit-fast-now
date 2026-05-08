@@ -1,13 +1,24 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Heart, Loader2, LogOut, Plus, Trash2 } from "lucide-react";
+import { Heart, Loader2, LogOut, Plus, Trash2, Flag } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { toast } from "sonner";
+
+interface Report {
+  id: string;
+  reason: string;
+  details: string | null;
+  status: string;
+  target_type: string;
+  target_id: string;
+  created_at: string;
+}
 
 interface Listing {
   id: string;
