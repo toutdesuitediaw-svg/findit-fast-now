@@ -5,6 +5,7 @@ import Logo from "./Logo";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
+import { useCart } from "@/hooks/useCart";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 const navItems = [
@@ -19,6 +20,7 @@ const Header = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { isAdmin } = useAdmin();
+  const { count } = useCart();
 
   const handleSignOut = async () => {
     await signOut();
@@ -71,9 +73,18 @@ const Header = () => {
               Se connecter
             </Button>
           )}
-          <Button variant="gold" onClick={() => navigate("/panier")}>
+          <Button variant="gold" onClick={() => navigate("/panier")} className="relative">
             Panier
             <ShoppingCart className="w-4 h-4" />
+            {count > 0 && (
+              <span
+                key={count}
+                aria-label={`${count} article(s) dans le panier`}
+                className="absolute -top-2 -right-2 min-w-[20px] h-5 px-1 rounded-full bg-destructive text-destructive-foreground text-[11px] font-bold flex items-center justify-center animate-in zoom-in"
+              >
+                {count > 99 ? "99+" : count}
+              </span>
+            )}
           </Button>
         </div>
 
