@@ -368,6 +368,31 @@ const Cart = () => {
               );
             })}
           </div>
+
+          {(() => {
+            const selected = groups?.filter((g) => selectedSellers.has(g.sellerId)) ?? [];
+            const itemCount = selected.reduce(
+              (s, g) => s + g.items.reduce((n, i) => n + i.quantity, 0),
+              0
+            );
+            const subtotal = selected.reduce((s, g) => s + g.subtotal, 0);
+            return (
+              <div className="border-t border-border pt-3 mt-1 space-y-1.5">
+                <div className="flex justify-between text-sm text-muted-foreground">
+                  <span>Vendeurs sélectionnés</span>
+                  <span>{selected.length}</span>
+                </div>
+                <div className="flex justify-between text-sm text-muted-foreground">
+                  <span>Articles</span>
+                  <span>{itemCount}</span>
+                </div>
+                <div className="flex justify-between items-baseline">
+                  <span className="font-semibold">Total</span>
+                  <span className="text-xl font-bold text-gradient-gold">{fmt(subtotal)}</span>
+                </div>
+              </div>
+            );
+          })()}
           <DialogFooter>
             <Button variant="ghost" onClick={() => setGroups(null)}>
               Annuler
