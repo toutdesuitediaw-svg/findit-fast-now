@@ -112,7 +112,7 @@ const PublishListing = () => {
     }));
     setPhotos((p) => [...p, ...newItems]);
     // Kick off uploads in background
-    newItems.forEach((it) => void uploadPhoto(it.id));
+    newItems.forEach((it) => void uploadPhoto(it.id, it.file));
     // Reset input so same file can be re-selected
     e.target.value = "";
   };
@@ -126,7 +126,8 @@ const PublishListing = () => {
   };
 
   const retryUpload = (id: string) => {
-    void uploadPhoto(id);
+    const item = photos.find((p) => p.id === id);
+    if (item) void uploadPhoto(id, item.file);
   };
 
   const clearAllFiles = () => {
