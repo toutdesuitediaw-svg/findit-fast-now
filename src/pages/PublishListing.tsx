@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
-import { Check, ImagePlus, Loader2, RotateCw, Trash2, TriangleAlert } from "lucide-react";
+import { Check, ImagePlus, Loader2, RotateCw, Trash2, TriangleAlert, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -40,6 +40,8 @@ const PublishListing = () => {
   const { user, loading: authLoading } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
+  // Tracks photos cancelled mid-upload so we ignore their late responses
+  const cancelledRef = useRef<Set<string>>(new Set());
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -77,12 +79,20 @@ const PublishListing = () => {
 
   const uploadPhoto = async (id: string, file: File) => {
     if (!user) return;
+    cancelledRef.current.delete(id);
     setPhotos((prev) =>
       prev.map((p) => (p.id === id ? { ...p, status: "uploading", error: undefined } : p)),
     );
     const ext = file.name.split(".").pop();
     const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
     const { error } = await supabase.storage.from("listing-photos").upload(path, file);
+    // If user cancelled while upload was in flight, ignore the result
+    if (cancelledRef.current.has(id)) {
+      cancelledRef.current.delete(id);
+      // Best-effort cleanup if it actually got uploaded
+      if (!error) supabase.storage.from("listing-photos").remove([path]).catch(() => {});
+      return;
+    }
     if (error) {
       setPhotos((prev) =>
         prev.map((p) => (p.id === id ? { ...p, status: "error", error: error.message } : p)),
@@ -92,6 +102,19 @@ const PublishListing = () => {
     const { data } = supabase.storage.from("listing-photos").getPublicUrl(path);
     setPhotos((prev) =>
       prev.map((p) => (p.id === id ? { ...p, status: "done", url: data.publicUrl } : p)),
+    );
+  };
+
+  const cancelUpload = (id: string, mode: "keep" | "remove" = "keep") => {
+    cancelledRef.current.add(id);
+    if (mode === "remove") {
+      removeFile(id);
+      return;
+    }
+    setPhotos((prev) =>
+      prev.map((p) =>
+        p.id === id ? { ...p, status: "pending", error: undefined, url: undefined } : p,
+      ),
     );
   };
 
@@ -120,6 +143,7 @@ const PublishListing = () => {
   const removeFile = (id: string) => {
     setPhotos((prev) => {
       const found = prev.find((p) => p.id === id);
+      if (found?.status === "uploading") cancelledRef.current.add(id);
       if (found?.preview.startsWith("blob:")) URL.revokeObjectURL(found.preview);
       return prev.filter((p) => p.id !== id);
     });
@@ -248,9 +272,38 @@ const PublishListing = () => {
 
                   {/* Status overlay */}
                   {(p.status === "uploading" || p.status === "pending") && (
-                    <div className="absolute inset-0 bg-background/55 backdrop-blur-[1px] flex flex-col items-center justify-center gap-1 text-xs font-medium">
+                    <div className="absolute inset-0 bg-background/65 backdrop-blur-[1px] flex flex-col items-center justify-center gap-1 text-xs font-medium px-2 text-center">
                       <Loader2 className="w-5 h-5 animate-spin text-primary" />
                       <span>{p.status === "pending" ? "En attente…" : "Envoi…"}</span>
+                      {p.status === "uploading" && (
+                        <div className="flex items-center gap-2 mt-1">
+                          <button
+                            type="button"
+                            onClick={() => cancelUpload(p.id, "keep")}
+                            className="inline-flex items-center gap-1 text-[10px] font-semibold text-foreground/80 hover:text-destructive underline underline-offset-2"
+                            aria-label="Annuler l'envoi"
+                          >
+                            <X className="w-3 h-3" /> Annuler
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => cancelUpload(p.id, "remove")}
+                            className="inline-flex items-center gap-1 text-[10px] font-semibold text-foreground/80 hover:text-destructive underline underline-offset-2"
+                            aria-label="Annuler et retirer la photo"
+                          >
+                            <Trash2 className="w-3 h-3" /> Retirer
+                          </button>
+                        </div>
+                      )}
+                      {p.status === "pending" && (
+                        <button
+                          type="button"
+                          onClick={() => retryUpload(p.id)}
+                          className="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold underline underline-offset-2"
+                        >
+                          <RotateCw className="w-3 h-3" /> Démarrer
+                        </button>
+                      )}
                     </div>
                   )}
                   {p.status === "error" && (
