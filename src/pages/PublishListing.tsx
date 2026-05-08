@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
-import { ImagePlus, Loader2, Trash2 } from "lucide-react";
+import { Check, ImagePlus, Loader2, RotateCw, Trash2, TriangleAlert } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -25,12 +25,21 @@ const schema = z.object({
 
 interface Category { id: string; name: string; }
 
+type UploadStatus = "pending" | "uploading" | "done" | "error";
+interface PhotoItem {
+  id: string;
+  file: File;
+  preview: string;
+  status: UploadStatus;
+  url?: string;
+  error?: string;
+}
+
 const PublishListing = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
-  const [files, setFiles] = useState<File[]>([]);
-  const [previews, setPreviews] = useState<string[]>([]);
+  const [photos, setPhotos] = useState<PhotoItem[]>([]);
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -40,6 +49,10 @@ const PublishListing = () => {
     is_premium: false,
   });
   const [busy, setBusy] = useState(false);
+
+  const doneCount = photos.filter((p) => p.status === "done").length;
+  const errorCount = photos.filter((p) => p.status === "error").length;
+  const uploadingCount = photos.filter((p) => p.status === "uploading").length;
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/auth", { replace: true });
@@ -62,8 +75,28 @@ const PublishListing = () => {
     });
   }, []);
 
+  const uploadPhoto = async (id: string, file: File) => {
+    if (!user) return;
+    setPhotos((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, status: "uploading", error: undefined } : p)),
+    );
+    const ext = file.name.split(".").pop();
+    const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
+    const { error } = await supabase.storage.from("listing-photos").upload(path, file);
+    if (error) {
+      setPhotos((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, status: "error", error: error.message } : p)),
+      );
+      return;
+    }
+    const { data } = supabase.storage.from("listing-photos").getPublicUrl(path);
+    setPhotos((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, status: "done", url: data.publicUrl } : p)),
+    );
+  };
+
   const handleFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const remaining = MAX_GALLERY_IMAGES - files.length;
+    const remaining = MAX_GALLERY_IMAGES - photos.length;
     const incoming = Array.from(e.target.files ?? []);
     if (incoming.length > remaining) {
       toast.error(`Maximum ${MAX_GALLERY_IMAGES} photos par annonce.`);
@@ -71,24 +104,35 @@ const PublishListing = () => {
     const selected = incoming.slice(0, Math.max(0, remaining));
     const valid = selected.filter((f) => f.size <= 5 * 1024 * 1024 && f.type.startsWith("image/"));
     if (valid.length < selected.length) toast.error("Certaines images ont été ignorées (max 5MB, images uniquement)");
-    setFiles((p) => [...p, ...valid]);
-    setPreviews((p) => [...p, ...valid.map((f) => URL.createObjectURL(f))]);
+    const newItems: PhotoItem[] = valid.map((f) => ({
+      id: crypto.randomUUID(),
+      file: f,
+      preview: URL.createObjectURL(f),
+      status: "pending",
+    }));
+    setPhotos((p) => [...p, ...newItems]);
+    // Kick off uploads in background
+    newItems.forEach((it) => void uploadPhoto(it.id, it.file));
+    // Reset input so same file can be re-selected
+    e.target.value = "";
   };
 
-  const removeFile = (i: number) => {
-    setPreviews((p) => {
-      const url = p[i];
-      if (url?.startsWith("blob:")) URL.revokeObjectURL(url);
-      return p.filter((_, idx) => idx !== i);
+  const removeFile = (id: string) => {
+    setPhotos((prev) => {
+      const found = prev.find((p) => p.id === id);
+      if (found?.preview.startsWith("blob:")) URL.revokeObjectURL(found.preview);
+      return prev.filter((p) => p.id !== id);
     });
-    setFiles((p) => p.filter((_, idx) => idx !== i));
-    toast.success("Photo supprimée");
+  };
+
+  const retryUpload = (id: string) => {
+    const item = photos.find((p) => p.id === id);
+    if (item) void uploadPhoto(id, item.file);
   };
 
   const clearAllFiles = () => {
-    previews.forEach((u) => u.startsWith("blob:") && URL.revokeObjectURL(u));
-    setFiles([]);
-    setPreviews([]);
+    photos.forEach((p) => p.preview.startsWith("blob:") && URL.revokeObjectURL(p.preview));
+    setPhotos([]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -97,24 +141,16 @@ const PublishListing = () => {
 
     const result = schema.safeParse(form);
     if (!result.success) return toast.error(result.error.issues[0].message);
-    if (files.length === 0) return toast.error("Ajoutez au moins une photo");
+    if (photos.length === 0) return toast.error("Ajoutez au moins une photo");
+    if (photos.some((p) => p.status === "uploading" || p.status === "pending")) {
+      return toast.error("Patientez la fin de l'upload des photos");
+    }
+    if (photos.some((p) => p.status === "error")) {
+      return toast.error("Corrigez les photos en erreur ou supprimez-les");
+    }
 
     setBusy(true);
-
-    // Upload photos to storage
-    const uploadedUrls: string[] = [];
-    for (const file of files) {
-      const ext = file.name.split(".").pop();
-      const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
-      const { error } = await supabase.storage.from("listing-photos").upload(path, file);
-      if (error) {
-        toast.error("Erreur upload : " + error.message);
-        setBusy(false);
-        return;
-      }
-      const { data } = supabase.storage.from("listing-photos").getPublicUrl(path);
-      uploadedUrls.push(data.publicUrl);
-    }
+    const uploadedUrls = photos.map((p) => p.url!).filter(Boolean);
 
     const { data: inserted, error } = await supabase
       .from("listings")
@@ -185,13 +221,15 @@ const PublishListing = () => {
                 <span
                   className={
                     "text-xs font-medium tabular-nums " +
-                    (files.length >= MAX_GALLERY_IMAGES ? "text-destructive" : "text-muted-foreground")
+                    (photos.length >= MAX_GALLERY_IMAGES ? "text-destructive" : "text-muted-foreground")
                   }
                   aria-live="polite"
                 >
-                  {files.length} / {MAX_GALLERY_IMAGES}
+                  {doneCount} / {photos.length || MAX_GALLERY_IMAGES} envoyée{doneCount > 1 ? "s" : ""}
+                  {uploadingCount > 0 && ` · ${uploadingCount} en cours`}
+                  {errorCount > 0 && ` · ${errorCount} en erreur`}
                 </span>
-                {files.length > 0 && (
+                {photos.length > 0 && (
                   <button
                     type="button"
                     onClick={clearAllFiles}
@@ -203,10 +241,37 @@ const PublishListing = () => {
               </div>
             </div>
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-              {previews.map((src, i) => (
-                <div key={src} className="group relative aspect-square rounded-lg overflow-hidden border border-border">
-                  <img src={src} alt={`Photo ${i + 1}`} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+              {photos.map((p, i) => (
+                <div key={p.id} className="group relative aspect-square rounded-lg overflow-hidden border border-border">
+                  <img src={p.preview} alt={`Photo ${i + 1}`} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                  {/* Status overlay */}
+                  {(p.status === "uploading" || p.status === "pending") && (
+                    <div className="absolute inset-0 bg-background/55 backdrop-blur-[1px] flex flex-col items-center justify-center gap-1 text-xs font-medium">
+                      <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                      <span>{p.status === "pending" ? "En attente…" : "Envoi…"}</span>
+                    </div>
+                  )}
+                  {p.status === "error" && (
+                    <div className="absolute inset-0 bg-destructive/85 text-destructive-foreground flex flex-col items-center justify-center gap-1 p-2 text-center">
+                      <TriangleAlert className="w-5 h-5" />
+                      <span className="text-[10px] leading-tight line-clamp-2">{p.error || "Échec"}</span>
+                      <button
+                        type="button"
+                        onClick={() => retryUpload(p.id)}
+                        className="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold underline underline-offset-2"
+                      >
+                        <RotateCw className="w-3 h-3" /> Réessayer
+                      </button>
+                    </div>
+                  )}
+                  {p.status === "done" && (
+                    <span className="absolute bottom-1 right-1 w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow">
+                      <Check className="w-3 h-3" />
+                    </span>
+                  )}
+
                   {i === 0 && (
                     <span className="absolute bottom-1 left-1 text-[10px] font-semibold uppercase tracking-wide bg-primary text-primary-foreground rounded px-1.5 py-0.5">
                       Couverture
@@ -214,7 +279,7 @@ const PublishListing = () => {
                   )}
                   <button
                     type="button"
-                    onClick={() => removeFile(i)}
+                    onClick={() => removeFile(p.id)}
                     aria-label={`Supprimer la photo ${i + 1}`}
                     className="absolute top-1 right-1 w-7 h-7 rounded-full bg-background/95 shadow-sm border border-border flex items-center justify-center hover:bg-destructive hover:text-destructive-foreground hover:border-destructive transition-colors"
                   >
@@ -222,7 +287,7 @@ const PublishListing = () => {
                   </button>
                 </div>
               ))}
-              {files.length < MAX_GALLERY_IMAGES && (
+              {photos.length < MAX_GALLERY_IMAGES && (
                 <label className="aspect-square rounded-lg border-2 border-dashed border-border hover:border-primary cursor-pointer flex flex-col items-center justify-center text-muted-foreground hover:text-primary transition-colors">
                   <ImagePlus className="w-6 h-6 mb-1" />
                   <span className="text-xs">Ajouter</span>
