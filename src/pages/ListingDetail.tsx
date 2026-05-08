@@ -151,8 +151,13 @@ const ListingDetail = () => {
               alt={listing.title}
               badge={
                 listing.is_premium ? (
-                  <span className="bg-gradient-gold text-primary-foreground text-xs font-bold tracking-widest px-3 py-1.5 rounded">
-                    PREMIUM
+                  <span className="bg-gradient-gold text-primary-foreground text-xs font-bold tracking-widest px-3 py-1.5 rounded inline-flex flex-col items-center leading-tight">
+                    <span>PREMIUM</span>
+                    {listing.premium_until && (
+                      <span className="text-[9px] font-medium tracking-normal opacity-90">
+                        jusqu'au {new Date(listing.premium_until).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })}
+                      </span>
+                    )}
                   </span>
                 ) : null
               }
