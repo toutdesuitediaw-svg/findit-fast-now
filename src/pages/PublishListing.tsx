@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
-import { Check, ImagePlus, Loader2, RotateCw, Trash2, TriangleAlert } from "lucide-react";
+import { Check, ImagePlus, Loader2, RotateCw, Trash2, TriangleAlert, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
