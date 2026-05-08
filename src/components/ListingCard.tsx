@@ -1,9 +1,10 @@
 import { useNavigate } from "react-router-dom";
-import { Heart } from "lucide-react";
+import { Flag, Heart } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import ReportListingDialog from "@/components/ReportListingDialog";
 
 export interface ListingCardData {
   id: string;
