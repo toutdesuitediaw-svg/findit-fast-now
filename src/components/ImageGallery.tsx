@@ -269,7 +269,7 @@ const ImageGallery = ({ images, alt, badge, topRight }: ImageGalleryProps) => {
 
           {total > 1 && (
             <div className="border-t border-border/50 p-3 flex gap-2 overflow-x-auto justify-center">
-              {images.map((src, i) => (
+              {resolved.map((src, i) => (
                 <button
                   key={i}
                   type="button"
@@ -284,7 +284,7 @@ const ImageGallery = ({ images, alt, badge, topRight }: ImageGalleryProps) => {
                       : "border-transparent opacity-60 hover:opacity-100",
                   )}
                 >
-                  <img src={src} alt="" className="w-full h-full object-cover" loading="lazy" />
+                  <img src={src} alt="" className="w-full h-full object-cover" loading="lazy" onError={handleImgError} />
                 </button>
               ))}
             </div>
