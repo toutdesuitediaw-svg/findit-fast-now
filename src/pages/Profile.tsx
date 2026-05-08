@@ -48,6 +48,25 @@ const Profile = () => {
     city: "",
     account_type: "particulier",
   });
+  const [confirmText, setConfirmText] = useState("");
+  const [confirmEmail, setConfirmEmail] = useState("");
+  const [deleting, setDeleting] = useState(false);
+
+  const onDeleteAccount = async () => {
+    if (!user) return;
+    setDeleting(true);
+    const { data, error } = await supabase.functions.invoke("delete-account", {
+      body: { confirmation: confirmText, email: confirmEmail },
+    });
+    setDeleting(false);
+    if (error || (data as any)?.error) {
+      toast.error((data as any)?.error || error?.message || "Suppression impossible");
+      return;
+    }
+    toast.success("Compte supprimé");
+    await supabase.auth.signOut();
+    navigate("/", { replace: true });
+  };
 
   useEffect(() => {
     if (!loading && !user) navigate("/auth", { replace: true });
