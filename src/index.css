@@ -98,9 +98,8 @@
 @layer utilities {
   .safe-top { padding-top: env(safe-area-inset-top); }
   .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
-}
 
-@layer utilities {
+
   .text-gradient-gold {
     background: var(--gradient-gold);
     -webkit-background-clip: text;
