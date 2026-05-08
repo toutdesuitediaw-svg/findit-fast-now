@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
-import { Loader2, Save, Upload, User as UserIcon } from "lucide-react";
+import { Loader2, Save, Upload, User as UserIcon, Trash2, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import Header from "@/components/Header";
@@ -11,6 +11,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 
 const schema = z.object({
@@ -37,6 +48,25 @@ const Profile = () => {
     city: "",
     account_type: "particulier",
   });
+  const [confirmText, setConfirmText] = useState("");
+  const [confirmEmail, setConfirmEmail] = useState("");
+  const [deleting, setDeleting] = useState(false);
+
+  const onDeleteAccount = async () => {
+    if (!user) return;
+    setDeleting(true);
+    const { data, error } = await supabase.functions.invoke("delete-account", {
+      body: { confirmation: confirmText, email: confirmEmail },
+    });
+    setDeleting(false);
+    if (error || (data as any)?.error) {
+      toast.error((data as any)?.error || error?.message || "Suppression impossible");
+      return;
+    }
+    toast.success("Compte supprimé");
+    await supabase.auth.signOut();
+    navigate("/", { replace: true });
+  };
 
   useEffect(() => {
     if (!loading && !user) navigate("/auth", { replace: true });
@@ -216,6 +246,85 @@ const Profile = () => {
             </Button>
           </div>
         </form>
+
+        <div className="mt-10 bg-card border border-destructive/40 rounded-2xl p-6">
+          <div className="flex items-start gap-3 mb-3">
+            <AlertTriangle className="w-5 h-5 text-destructive mt-0.5" />
+            <div>
+              <h2 className="font-display text-xl font-bold text-destructive">Zone dangereuse</h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                La suppression de votre compte est <strong>définitive</strong>. Vos annonces, messages
+                et favoris seront effacés et ne pourront pas être récupérés.
+              </p>
+            </div>
+          </div>
+
+          <AlertDialog
+            onOpenChange={(open) => {
+              if (!open) {
+                setConfirmText("");
+                setConfirmEmail("");
+              }
+            }}
+          >
+            <AlertDialogTrigger asChild>
+              <Button type="button" variant="destructive" className="mt-2">
+                <Trash2 className="w-4 h-4" />
+                Supprimer mon compte
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Cette action est <strong>irréversible</strong>. Pour confirmer, saisissez votre email
+                  et tapez <strong>SUPPRIMER</strong> en majuscules.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label htmlFor="confirm_email">Votre email</Label>
+                  <Input
+                    id="confirm_email"
+                    type="email"
+                    placeholder={user.email ?? ""}
+                    value={confirmEmail}
+                    onChange={(e) => setConfirmEmail(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirm_text">Tapez SUPPRIMER</Label>
+                  <Input
+                    id="confirm_text"
+                    value={confirmText}
+                    onChange={(e) => setConfirmText(e.target.value)}
+                    placeholder="SUPPRIMER"
+                  />
+                </div>
+              </div>
+
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={deleting}>Annuler</AlertDialogCancel>
+                <AlertDialogAction
+                  disabled={
+                    deleting ||
+                    confirmText !== "SUPPRIMER" ||
+                    confirmEmail.trim().toLowerCase() !== (user.email ?? "").toLowerCase()
+                  }
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onDeleteAccount();
+                  }}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                  Supprimer définitivement
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       </main>
       <Footer />
     </div>
