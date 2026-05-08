@@ -507,8 +507,9 @@ const PublishListing = () => {
                     </ul>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Le paiement vous sera demandé après publication. Vous pouvez aussi désactiver
-                    l'option pour publier gratuitement.
+                    Votre annonce sera publiée immédiatement en standard. Le badge Premium
+                    et la mise en avant seront activés <strong>uniquement après confirmation
+                    du paiement</strong>. Vous pouvez aussi publier sans Premium.
                   </p>
                 </div>
               </AlertDialogDescription>
