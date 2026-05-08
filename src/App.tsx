@@ -16,6 +16,7 @@ import ResetPassword from "./pages/ResetPassword.tsx";
 import Cart from "./pages/Cart.tsx";
 import OrderConfirmation from "./pages/OrderConfirmation.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import RequireAuth from "./components/RequireAuth.tsx";
 
 const queryClient = new QueryClient();
 
@@ -36,7 +37,7 @@ const App = () => (
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/panier" element={<Cart />} />
+            <Route path="/panier" element={<RequireAuth><Cart /></RequireAuth>} />
             <Route path="/commande/confirmation" element={<OrderConfirmation />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
