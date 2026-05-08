@@ -230,9 +230,10 @@ const ImageGallery = ({ images, alt, badge, topRight }: ImageGalleryProps) => {
           >
             {hasImages && (
               <img
-                src={images[active]}
+                src={resolved[active]}
                 alt={`${alt} — photo ${active + 1}`}
                 draggable={false}
+                onError={handleImgError}
                 style={{
                   transform: `scale(${zoom})`,
                   transformOrigin: `${origin.x}% ${origin.y}%`,
