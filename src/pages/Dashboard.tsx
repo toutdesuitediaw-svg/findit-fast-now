@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Heart, Loader2, LogOut, Plus, Trash2, Flag } from "lucide-react";
+import { Heart, Loader2, LogOut, Plus, Trash2, Flag, MessageSquare } from "lucide-react";
+import MessagesTab from "@/components/MessagesTab";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -112,9 +113,14 @@ const Dashboard = () => {
         <Tabs defaultValue="listings">
           <TabsList>
             <TabsTrigger value="listings">Mes annonces ({myListings.length})</TabsTrigger>
+            <TabsTrigger value="messages"><MessageSquare className="w-4 h-4 mr-1" /> Messages</TabsTrigger>
             <TabsTrigger value="favorites">Favoris ({favorites.length})</TabsTrigger>
-            <TabsTrigger value="reports">Mes signalements ({reports.length})</TabsTrigger>
+            <TabsTrigger value="reports">Signalements ({reports.length})</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="messages" className="mt-6">
+            <MessagesTab userId={user.id} />
+          </TabsContent>
 
           <TabsContent value="listings" className="mt-6">
             {busy ? (
