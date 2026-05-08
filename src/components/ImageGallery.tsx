@@ -163,7 +163,7 @@ const ImageGallery = ({ images, alt, badge, topRight }: ImageGalleryProps) => {
           ref={thumbsRef}
           className="mt-3 flex gap-2 overflow-x-auto scroll-smooth pb-1 [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:bg-primary/40 [&::-webkit-scrollbar-thumb]:rounded-full"
         >
-          {images.map((src, i) => (
+          {resolved.map((src, i) => (
             <button
               key={i}
               data-idx={i}
@@ -177,7 +177,7 @@ const ImageGallery = ({ images, alt, badge, topRight }: ImageGalleryProps) => {
                   : "border-transparent opacity-70 hover:opacity-100",
               )}
             >
-              <img src={src} alt="" className="w-full h-full object-cover" loading="lazy" />
+              <img src={src} alt="" className="w-full h-full object-cover" loading="lazy" onError={handleImgError} />
             </button>
           ))}
         </div>
