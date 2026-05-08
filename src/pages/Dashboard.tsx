@@ -36,6 +36,7 @@ const Dashboard = () => {
   const { user, loading, signOut } = useAuth();
   const [myListings, setMyListings] = useState<Listing[]>([]);
   const [favorites, setFavorites] = useState<Listing[]>([]);
+  const [reports, setReports] = useState<Report[]>([]);
   const [profile, setProfile] = useState<{ display_name: string | null } | null>(null);
   const [busy, setBusy] = useState(true);
 
@@ -47,14 +48,16 @@ const Dashboard = () => {
     if (!user) return;
     const load = async () => {
       setBusy(true);
-      const [{ data: l }, { data: f }, { data: p }] = await Promise.all([
+      const [{ data: l }, { data: f }, { data: p }, { data: r }] = await Promise.all([
         supabase.from("listings").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
         supabase.from("favorites").select("listing:listings(*)").eq("user_id", user.id),
         supabase.from("profiles").select("display_name").eq("id", user.id).maybeSingle(),
+        supabase.from("reports").select("*").eq("reporter_id", user.id).order("created_at", { ascending: false }),
       ]);
       setMyListings((l ?? []) as Listing[]);
       setFavorites(((f ?? []).map((x: any) => x.listing).filter(Boolean)) as Listing[]);
       setProfile(p);
+      setReports((r ?? []) as Report[]);
       setBusy(false);
     };
     load();
