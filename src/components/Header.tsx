@@ -73,9 +73,18 @@ const Header = () => {
               Se connecter
             </Button>
           )}
-          <Button variant="gold" onClick={() => navigate("/panier")}>
+          <Button variant="gold" onClick={() => navigate("/panier")} className="relative">
             Panier
             <ShoppingCart className="w-4 h-4" />
+            {count > 0 && (
+              <span
+                key={count}
+                aria-label={`${count} article(s) dans le panier`}
+                className="absolute -top-2 -right-2 min-w-[20px] h-5 px-1 rounded-full bg-destructive text-destructive-foreground text-[11px] font-bold flex items-center justify-center animate-in zoom-in"
+              >
+                {count > 99 ? "99+" : count}
+              </span>
+            )}
           </Button>
         </div>
 
