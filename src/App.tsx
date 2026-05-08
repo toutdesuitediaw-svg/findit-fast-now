@@ -8,6 +8,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
 import Index from "./pages/Index.tsx";
 import RequireAuth from "./components/RequireAuth.tsx";
+import IOSInstallHint from "./components/IOSInstallHint.tsx";
 
 const Auth = lazy(() => import("./pages/Auth.tsx"));
 const Dashboard = lazy(() => import("./pages/Dashboard.tsx"));
@@ -54,6 +55,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
+          <IOSInstallHint />
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
