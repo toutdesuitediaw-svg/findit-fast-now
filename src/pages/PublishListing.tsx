@@ -531,7 +531,7 @@ const PublishListing = () => {
                 onClick={async (e) => {
                   e.preventDefault();
                   setConfirmPremiumOpen(false);
-                  await publishListing();
+                  await publishListing(true);
                 }}
               >
                 {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Star className="w-4 h-4" />}
