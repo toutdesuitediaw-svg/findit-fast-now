@@ -20,6 +20,7 @@ const Header = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { isAdmin } = useAdmin();
+  const { count } = useCart();
 
   const handleSignOut = async () => {
     await signOut();
