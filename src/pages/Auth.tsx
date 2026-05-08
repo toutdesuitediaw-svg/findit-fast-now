@@ -19,6 +19,8 @@ const whatsappSchema = z.string().trim().regex(/^\+?[0-9\s-]{8,20}$/, "Numéro W
 
 const Auth = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectTo = searchParams.get("redirect") || "/dashboard";
   const { user, loading: authLoading } = useAuth();
   const [tab, setTab] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
@@ -28,8 +30,8 @@ const Auth = () => {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && user) navigate("/dashboard", { replace: true });
-  }, [user, authLoading, navigate]);
+    if (!authLoading && user) navigate(redirectTo, { replace: true });
+  }, [user, authLoading, navigate, redirectTo]);
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
