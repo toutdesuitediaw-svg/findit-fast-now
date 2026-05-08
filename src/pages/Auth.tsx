@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
-import { Mail, Lock, Loader2 } from "lucide-react";
+import { Mail, Lock, Loader2, Phone } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { useAuth } from "@/hooks/useAuth";
@@ -15,6 +15,7 @@ import Logo from "@/components/Logo";
 const emailSchema = z.string().trim().email("Email invalide").max(255);
 const passwordSchema = z.string().min(6, "Au moins 6 caractères").max(72);
 const nameSchema = z.string().trim().min(2, "Au moins 2 caractères").max(80);
+const whatsappSchema = z.string().trim().regex(/^\+?[0-9\s-]{8,20}$/, "Numéro WhatsApp invalide");
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -23,6 +24,7 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -34,7 +36,10 @@ const Auth = () => {
     try {
       emailSchema.parse(email);
       passwordSchema.parse(password);
-      if (tab === "signup") nameSchema.parse(name);
+      if (tab === "signup") {
+        nameSchema.parse(name);
+        whatsappSchema.parse(whatsapp);
+      }
     } catch (err) {
       if (err instanceof z.ZodError) {
         toast.error(err.issues[0].message);
@@ -49,7 +54,7 @@ const Auth = () => {
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/dashboard`,
-          data: { full_name: name },
+          data: { full_name: name, whatsapp },
         },
       });
       if (error) toast.error(error.message);
@@ -134,6 +139,13 @@ const Auth = () => {
                 <div className="space-y-2">
                   <Label htmlFor="name">Nom complet</Label>
                   <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Jean Dupont" required={tab === "signup"} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="whatsapp">Numéro WhatsApp</Label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input id="whatsapp" type="tel" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} placeholder="+229 01 00 00 00 00" className="pl-10" required={tab === "signup"} />
+                  </div>
                 </div>
               </TabsContent>
 
