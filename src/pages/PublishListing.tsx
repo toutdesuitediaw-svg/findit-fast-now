@@ -75,8 +75,33 @@ const PublishListing = () => {
     });
   }, []);
 
+  const uploadPhoto = async (id: string) => {
+    if (!user) return;
+    setPhotos((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, status: "uploading", error: undefined } : p)),
+    );
+    const target = photos.find((p) => p.id === id);
+    // Read latest file from state to avoid stale ref
+    setPhotos((prev) => prev); // no-op to satisfy linter
+    const item = target ?? null;
+    if (!item) return;
+    const ext = item.file.name.split(".").pop();
+    const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
+    const { error } = await supabase.storage.from("listing-photos").upload(path, item.file);
+    if (error) {
+      setPhotos((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, status: "error", error: error.message } : p)),
+      );
+      return;
+    }
+    const { data } = supabase.storage.from("listing-photos").getPublicUrl(path);
+    setPhotos((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, status: "done", url: data.publicUrl } : p)),
+    );
+  };
+
   const handleFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const remaining = MAX_GALLERY_IMAGES - files.length;
+    const remaining = MAX_GALLERY_IMAGES - photos.length;
     const incoming = Array.from(e.target.files ?? []);
     if (incoming.length > remaining) {
       toast.error(`Maximum ${MAX_GALLERY_IMAGES} photos par annonce.`);
@@ -84,24 +109,34 @@ const PublishListing = () => {
     const selected = incoming.slice(0, Math.max(0, remaining));
     const valid = selected.filter((f) => f.size <= 5 * 1024 * 1024 && f.type.startsWith("image/"));
     if (valid.length < selected.length) toast.error("Certaines images ont été ignorées (max 5MB, images uniquement)");
-    setFiles((p) => [...p, ...valid]);
-    setPreviews((p) => [...p, ...valid.map((f) => URL.createObjectURL(f))]);
+    const newItems: PhotoItem[] = valid.map((f) => ({
+      id: crypto.randomUUID(),
+      file: f,
+      preview: URL.createObjectURL(f),
+      status: "pending",
+    }));
+    setPhotos((p) => [...p, ...newItems]);
+    // Kick off uploads in background
+    newItems.forEach((it) => void uploadPhoto(it.id));
+    // Reset input so same file can be re-selected
+    e.target.value = "";
   };
 
-  const removeFile = (i: number) => {
-    setPreviews((p) => {
-      const url = p[i];
-      if (url?.startsWith("blob:")) URL.revokeObjectURL(url);
-      return p.filter((_, idx) => idx !== i);
+  const removeFile = (id: string) => {
+    setPhotos((prev) => {
+      const found = prev.find((p) => p.id === id);
+      if (found?.preview.startsWith("blob:")) URL.revokeObjectURL(found.preview);
+      return prev.filter((p) => p.id !== id);
     });
-    setFiles((p) => p.filter((_, idx) => idx !== i));
-    toast.success("Photo supprimée");
+  };
+
+  const retryUpload = (id: string) => {
+    void uploadPhoto(id);
   };
 
   const clearAllFiles = () => {
-    previews.forEach((u) => u.startsWith("blob:") && URL.revokeObjectURL(u));
-    setFiles([]);
-    setPreviews([]);
+    photos.forEach((p) => p.preview.startsWith("blob:") && URL.revokeObjectURL(p.preview));
+    setPhotos([]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -110,24 +145,16 @@ const PublishListing = () => {
 
     const result = schema.safeParse(form);
     if (!result.success) return toast.error(result.error.issues[0].message);
-    if (files.length === 0) return toast.error("Ajoutez au moins une photo");
+    if (photos.length === 0) return toast.error("Ajoutez au moins une photo");
+    if (photos.some((p) => p.status === "uploading" || p.status === "pending")) {
+      return toast.error("Patientez la fin de l'upload des photos");
+    }
+    if (photos.some((p) => p.status === "error")) {
+      return toast.error("Corrigez les photos en erreur ou supprimez-les");
+    }
 
     setBusy(true);
-
-    // Upload photos to storage
-    const uploadedUrls: string[] = [];
-    for (const file of files) {
-      const ext = file.name.split(".").pop();
-      const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
-      const { error } = await supabase.storage.from("listing-photos").upload(path, file);
-      if (error) {
-        toast.error("Erreur upload : " + error.message);
-        setBusy(false);
-        return;
-      }
-      const { data } = supabase.storage.from("listing-photos").getPublicUrl(path);
-      uploadedUrls.push(data.publicUrl);
-    }
+    const uploadedUrls = photos.map((p) => p.url!).filter(Boolean);
 
     const { data: inserted, error } = await supabase
       .from("listings")
