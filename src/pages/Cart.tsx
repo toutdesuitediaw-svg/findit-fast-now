@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Loader2, MessageCircle, Minus, Plus, ShoppingCart, Trash2 } from "lucide-react";
+import { Check, Loader2, MessageCircle, Minus, Plus, ShoppingCart, Trash2 } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
@@ -30,6 +31,24 @@ const Cart = () => {
   const { items, updateQuantity, removeItem, clear, total, count, currency } = useCart();
   const [loadingCheckout, setLoadingCheckout] = useState(false);
   const [groups, setGroups] = useState<SellerGroup[] | null>(null);
+  const [selectedSellers, setSelectedSellers] = useState<Set<string>>(new Set());
+  const [contactedSellers, setContactedSellers] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (groups) {
+      setSelectedSellers(new Set(groups.filter((g) => g.whatsapp).map((g) => g.sellerId)));
+      setContactedSellers(new Set());
+    }
+  }, [groups]);
+
+  const toggleSeller = (id: string) => {
+    setSelectedSellers((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   const fmt = (n: number) => `${Number(n).toLocaleString("fr-FR")} ${currency}`;
 
@@ -124,19 +143,30 @@ const Cart = () => {
   const contactSeller = (group: SellerGroup) => {
     const orderNumber = `CMD-${Date.now().toString(36).toUpperCase()}`;
     window.open(waLink(group, orderNumber), "_blank", "noopener,noreferrer");
+    setContactedSellers((prev) => new Set(prev).add(group.sellerId));
   };
 
   const finishMultiSeller = () => {
+    if (!groups) return;
+    const selected = groups.filter((g) => selectedSellers.has(g.sellerId));
+    if (selected.length === 0) {
+      toast.error("Sélectionnez au moins un vendeur");
+      return;
+    }
+    const selectedItemIds = new Set(selected.flatMap((g) => g.items.map((i) => i.id)));
+    const orderItems = items.filter((i) => selectedItemIds.has(i.id));
+    const orderTotal = orderItems.reduce((s, i) => s + i.price * i.quantity, 0);
+
     const orderNumber = `CMD-${Date.now().toString(36).toUpperCase()}`;
     const order = {
       orderNumber,
-      items: [...items],
-      total,
+      items: orderItems,
+      total: orderTotal,
       currency,
       date: new Date().toISOString(),
     };
     setGroups(null);
-    clear();
+    selectedItemIds.forEach((id) => removeItem(id));
     navigate("/commande/confirmation", { state: order });
   };
 
@@ -264,40 +294,90 @@ const Cart = () => {
       <Dialog open={!!groups} onOpenChange={(o) => !o && setGroups(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Plusieurs vendeurs à contacter</DialogTitle>
+            <DialogTitle>Sélectionnez les vendeurs à contacter</DialogTitle>
             <DialogDescription>
-              Votre panier contient des articles de différents vendeurs. Contactez chacun
-              d'eux sur WhatsApp pour finaliser votre commande.
+              Cochez uniquement les vendeurs avec qui vous voulez commander. Les articles
+              non sélectionnés resteront dans votre panier.
             </DialogDescription>
           </DialogHeader>
+
+          <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
+            <span>{selectedSellers.size} vendeur(s) sélectionné(s)</span>
+            <button
+              type="button"
+              className="hover:text-primary underline"
+              onClick={() => {
+                const allReachable = groups?.filter((g) => g.whatsapp).map((g) => g.sellerId) ?? [];
+                setSelectedSellers(
+                  selectedSellers.size === allReachable.length ? new Set() : new Set(allReachable)
+                );
+              }}
+            >
+              {selectedSellers.size === groups?.filter((g) => g.whatsapp).length
+                ? "Tout désélectionner"
+                : "Tout sélectionner"}
+            </button>
+          </div>
+
           <div className="space-y-2 max-h-[50vh] overflow-y-auto">
-            {groups?.map((g) => (
-              <div
-                key={g.sellerId}
-                className="border border-border rounded-xl p-3 flex items-center gap-3"
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold line-clamp-1">{g.sellerName}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {g.items.length} article{g.items.length > 1 ? "s" : ""} · {fmt(g.subtotal)}
-                  </p>
-                </div>
-                {g.whatsapp ? (
-                  <Button variant="gold" size="sm" onClick={() => contactSeller(g)}>
-                    <MessageCircle className="w-4 h-4" /> Contacter
-                  </Button>
-                ) : (
-                  <span className="text-xs text-muted-foreground">Pas de WhatsApp</span>
-                )}
-              </div>
-            ))}
+            {groups?.map((g) => {
+              const checked = selectedSellers.has(g.sellerId);
+              const contacted = contactedSellers.has(g.sellerId);
+              return (
+                <label
+                  key={g.sellerId}
+                  className={`border rounded-xl p-3 flex items-center gap-3 transition-colors ${
+                    !g.whatsapp
+                      ? "border-border opacity-60 cursor-not-allowed"
+                      : checked
+                      ? "border-primary bg-primary/5 cursor-pointer"
+                      : "border-border hover:border-primary/50 cursor-pointer"
+                  }`}
+                >
+                  <Checkbox
+                    checked={checked}
+                    disabled={!g.whatsapp}
+                    onCheckedChange={() => g.whatsapp && toggleSeller(g.sellerId)}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold line-clamp-1 flex items-center gap-2">
+                      {g.sellerName}
+                      {contacted && <Check className="w-3.5 h-3.5 text-primary" />}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {g.items.length} article{g.items.length > 1 ? "s" : ""} · {fmt(g.subtotal)}
+                    </p>
+                  </div>
+                  {g.whatsapp ? (
+                    <Button
+                      variant={contacted ? "outlineGold" : "gold"}
+                      size="sm"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        contactSeller(g);
+                      }}
+                      disabled={!checked}
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      {contacted ? "Renvoyer" : "Contacter"}
+                    </Button>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">Pas de WhatsApp</span>
+                  )}
+                </label>
+              );
+            })}
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setGroups(null)}>
               Annuler
             </Button>
-            <Button variant="outlineGold" onClick={finishMultiSeller}>
-              J'ai contacté les vendeurs
+            <Button
+              variant="outlineGold"
+              onClick={finishMultiSeller}
+              disabled={selectedSellers.size === 0}
+            >
+              Confirmer la commande
             </Button>
           </DialogFooter>
         </DialogContent>
