@@ -63,6 +63,52 @@ const Dashboard = () => {
       setBusy(false);
     };
     load();
+
+    // Realtime: keep my listings + favorited listings in sync
+    const channel = supabase
+      .channel(`dashboard:${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "listings" },
+        (payload) => {
+          const row = (payload.new ?? payload.old) as any;
+          // Update my own listings list
+          if (row.user_id === user.id) {
+            if (payload.eventType === "INSERT") {
+              setMyListings((prev) => (prev.some((x) => x.id === row.id) ? prev : [row as Listing, ...prev]));
+            } else if (payload.eventType === "UPDATE") {
+              setMyListings((prev) => prev.map((x) => (x.id === row.id ? { ...x, ...(row as Listing) } : x)));
+            } else if (payload.eventType === "DELETE") {
+              setMyListings((prev) => prev.filter((x) => x.id !== row.id));
+            }
+          }
+          // Sync favorited listings (premium badge, price, status...)
+          setFavorites((prev) => {
+            if (!prev.some((x) => x.id === row.id)) return prev;
+            if (payload.eventType === "DELETE") return prev.filter((x) => x.id !== row.id);
+            return prev.map((x) => (x.id === row.id ? { ...x, ...(row as Listing) } : x));
+          });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "favorites", filter: `user_id=eq.${user.id}` },
+        async (payload) => {
+          if (payload.eventType === "DELETE") {
+            const removedId = (payload.old as any).listing_id;
+            setFavorites((prev) => prev.filter((x) => x.id !== removedId));
+          } else if (payload.eventType === "INSERT") {
+            const listingId = (payload.new as any).listing_id;
+            const { data } = await supabase.from("listings").select("*").eq("id", listingId).maybeSingle();
+            if (data) setFavorites((prev) => (prev.some((x) => x.id === data.id) ? prev : [data as Listing, ...prev]));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   const deleteListing = async (id: string) => {
