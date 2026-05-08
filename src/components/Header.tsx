@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { LayoutDashboard, LogOut, Menu, Plus, Shield, User, X } from "lucide-react";
+import { LayoutDashboard, LogOut, Menu, ShoppingCart, Shield, User, X } from "lucide-react";
 import Logo from "./Logo";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -71,9 +71,9 @@ const Header = () => {
               Se connecter
             </Button>
           )}
-          <Button variant="gold" onClick={() => navigate(user ? "/publier" : "/auth")}>
-            Publier une annonce
-            <Plus className="w-4 h-4" />
+          <Button variant="gold" onClick={() => navigate("/panier")}>
+            Panier
+            <ShoppingCart className="w-4 h-4" />
           </Button>
         </div>
 
