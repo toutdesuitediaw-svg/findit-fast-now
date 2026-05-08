@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { trackPwaEvent } from "@/lib/pwaAnalytics";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -24,6 +25,9 @@ const Installer = () => {
   const [installed, setInstalled] = useState(false);
 
   useEffect(() => {
+    // Track page view once
+    trackPwaEvent("page_view");
+
     // @ts-ignore
     const isStandalone = window.navigator.standalone || window.matchMedia("(display-mode: standalone)").matches;
     if (isStandalone) setInstalled(true);
@@ -32,7 +36,10 @@ const Installer = () => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
     };
-    const onInstalled = () => setInstalled(true);
+    const onInstalled = () => {
+      setInstalled(true);
+      trackPwaEvent("app_installed");
+    };
 
     window.addEventListener("beforeinstallprompt", onBeforeInstall);
     window.addEventListener("appinstalled", onInstalled);
@@ -44,9 +51,15 @@ const Installer = () => {
 
   const triggerInstall = async () => {
     if (!deferredPrompt) return;
+    trackPwaEvent("install_click");
     await deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === "accepted") setInstalled(true);
+    if (outcome === "accepted") {
+      setInstalled(true);
+      trackPwaEvent("install_accepted");
+    } else {
+      trackPwaEvent("install_dismissed");
+    }
     setDeferredPrompt(null);
   };
 
