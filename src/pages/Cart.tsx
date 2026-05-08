@@ -143,6 +143,14 @@ const Cart = () => {
     if (items.length === 0) return;
     setLoadingCheckout(true);
 
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData.session) {
+      setLoadingCheckout(false);
+      toast.info("Connectez-vous pour valider votre commande");
+      navigate(`/auth?redirect=${encodeURIComponent("/panier")}`);
+      return;
+    }
+
     const { data: listings, error } = await supabase
       .from("listings")
       .select("id, user_id")
