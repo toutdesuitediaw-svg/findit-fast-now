@@ -118,6 +118,20 @@ Deno.serve(async (req) => {
         .maybeSingle();
       if (targetRoles) return json({ error: "Impossible de supprimer un autre administrateur." }, 403);
 
+      // Cleanup user storage files (listing photos + avatar) under `${userId}/`
+      try {
+        const removeFolder = async (prefix: string) => {
+          const { data: files } = await admin.storage.from("listing-photos").list(prefix, { limit: 1000 });
+          if (files && files.length > 0) {
+            const paths = files.map((f) => `${prefix}/${f.name}`);
+            await admin.storage.from("listing-photos").remove(paths);
+          }
+        };
+        await removeFolder(userId);
+      } catch (e) {
+        console.error("storage cleanup failed", e);
+      }
+
       // Cleanup user-owned data
       await admin.from("favorites").delete().eq("user_id", userId);
       await admin.from("messages").delete().or(`sender_id.eq.${userId},recipient_id.eq.${userId}`);
