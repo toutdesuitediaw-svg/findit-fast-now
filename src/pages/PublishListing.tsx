@@ -225,13 +225,15 @@ const PublishListing = () => {
                 <span
                   className={
                     "text-xs font-medium tabular-nums " +
-                    (files.length >= MAX_GALLERY_IMAGES ? "text-destructive" : "text-muted-foreground")
+                    (photos.length >= MAX_GALLERY_IMAGES ? "text-destructive" : "text-muted-foreground")
                   }
                   aria-live="polite"
                 >
-                  {files.length} / {MAX_GALLERY_IMAGES}
+                  {doneCount} / {photos.length || MAX_GALLERY_IMAGES} envoyée{doneCount > 1 ? "s" : ""}
+                  {uploadingCount > 0 && ` · ${uploadingCount} en cours`}
+                  {errorCount > 0 && ` · ${errorCount} en erreur`}
                 </span>
-                {files.length > 0 && (
+                {photos.length > 0 && (
                   <button
                     type="button"
                     onClick={clearAllFiles}
@@ -243,10 +245,37 @@ const PublishListing = () => {
               </div>
             </div>
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-              {previews.map((src, i) => (
-                <div key={src} className="group relative aspect-square rounded-lg overflow-hidden border border-border">
-                  <img src={src} alt={`Photo ${i + 1}`} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+              {photos.map((p, i) => (
+                <div key={p.id} className="group relative aspect-square rounded-lg overflow-hidden border border-border">
+                  <img src={p.preview} alt={`Photo ${i + 1}`} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                  {/* Status overlay */}
+                  {(p.status === "uploading" || p.status === "pending") && (
+                    <div className="absolute inset-0 bg-background/55 backdrop-blur-[1px] flex flex-col items-center justify-center gap-1 text-xs font-medium">
+                      <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                      <span>{p.status === "pending" ? "En attente…" : "Envoi…"}</span>
+                    </div>
+                  )}
+                  {p.status === "error" && (
+                    <div className="absolute inset-0 bg-destructive/85 text-destructive-foreground flex flex-col items-center justify-center gap-1 p-2 text-center">
+                      <TriangleAlert className="w-5 h-5" />
+                      <span className="text-[10px] leading-tight line-clamp-2">{p.error || "Échec"}</span>
+                      <button
+                        type="button"
+                        onClick={() => retryUpload(p.id)}
+                        className="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold underline underline-offset-2"
+                      >
+                        <RotateCw className="w-3 h-3" /> Réessayer
+                      </button>
+                    </div>
+                  )}
+                  {p.status === "done" && (
+                    <span className="absolute bottom-1 right-1 w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow">
+                      <Check className="w-3 h-3" />
+                    </span>
+                  )}
+
                   {i === 0 && (
                     <span className="absolute bottom-1 left-1 text-[10px] font-semibold uppercase tracking-wide bg-primary text-primary-foreground rounded px-1.5 py-0.5">
                       Couverture
@@ -254,7 +283,7 @@ const PublishListing = () => {
                   )}
                   <button
                     type="button"
-                    onClick={() => removeFile(i)}
+                    onClick={() => removeFile(p.id)}
                     aria-label={`Supprimer la photo ${i + 1}`}
                     className="absolute top-1 right-1 w-7 h-7 rounded-full bg-background/95 shadow-sm border border-border flex items-center justify-center hover:bg-destructive hover:text-destructive-foreground hover:border-destructive transition-colors"
                   >
@@ -262,7 +291,7 @@ const PublishListing = () => {
                   </button>
                 </div>
               ))}
-              {files.length < MAX_GALLERY_IMAGES && (
+              {photos.length < MAX_GALLERY_IMAGES && (
                 <label className="aspect-square rounded-lg border-2 border-dashed border-border hover:border-primary cursor-pointer flex flex-col items-center justify-center text-muted-foreground hover:text-primary transition-colors">
                   <ImagePlus className="w-6 h-6 mb-1" />
                   <span className="text-xs">Ajouter</span>
