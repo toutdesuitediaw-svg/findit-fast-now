@@ -140,6 +140,23 @@ const IOSInstallHint = () => {
                 <span className="font-medium">« Sur l'écran d'accueil »</span>
               </li>
             </ol>
+          ) : deferredPrompt ? (
+            <div className="mt-3">
+              <Button
+                size="sm"
+                variant="gold"
+                className="h-9 px-3 text-xs"
+                onClick={async () => {
+                  await deferredPrompt.prompt();
+                  const { outcome } = await deferredPrompt.userChoice;
+                  if (outcome === "accepted") localStorage.setItem(DISMISS_KEY, "1");
+                  setDeferredPrompt(null);
+                  setShow(false);
+                }}
+              >
+                <Download className="h-4 w-4 mr-1.5" /> Installer l'application
+              </Button>
+            </div>
           ) : (
             <ol className="mt-2 space-y-1 text-xs text-foreground">
               <li className="flex items-center gap-1.5">
