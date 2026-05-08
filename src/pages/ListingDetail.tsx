@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Flag, Heart, Loader2, MapPin, MessageCircle, Phone } from "lucide-react";
+import { Flag, Heart, Loader2, MapPin, MessageCircle, Phone, ShoppingCart } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useCart } from "@/hooks/useCart";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -32,6 +33,7 @@ const ListingDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { addItem } = useCart();
   const [listing, setListing] = useState<ListingDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeImg, setActiveImg] = useState(0);
@@ -111,6 +113,19 @@ const ListingDetail = () => {
     setReportDetails("");
   };
 
+  const handleOrder = () => {
+    if (!listing) return;
+    addItem({
+      id: listing.id,
+      title: listing.title,
+      price: Number(listing.price ?? 0),
+      currency: listing.currency,
+      image: listing.images?.[0],
+    });
+    toast.success("Ajouté au panier");
+    navigate("/panier");
+  };
+
   if (loading || !listing) {
     return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>;
   }
@@ -183,6 +198,10 @@ const ListingDetail = () => {
                 <p className="font-semibold text-lg">{listing.seller?.display_name ?? "Utilisateur"}</p>
                 {listing.seller?.city && <p className="text-xs text-muted-foreground">{listing.seller.city}</p>}
               </div>
+
+              <Button variant="gold" className="w-full" onClick={handleOrder}>
+                <ShoppingCart className="w-4 h-4" /> Commander
+              </Button>
 
               {waNumber ? (
                 <>
