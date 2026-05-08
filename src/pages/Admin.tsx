@@ -785,14 +785,17 @@ const Admin = () => {
 
           {/* === SETTINGS === */}
           <TabsContent value="settings">
-            <Card className="p-4">
-              <h3 className="font-semibold mb-4">Paramètres du site</h3>
-              <div className="space-y-4">
-                {settings.map(s => (
-                  <SettingRow key={s.key} setting={s} onSave={updateSetting} />
-                ))}
-              </div>
-            </Card>
+            <div className="grid gap-4 md:grid-cols-2">
+              <Card className="p-4">
+                <h3 className="font-semibold mb-4">Paramètres du site</h3>
+                <div className="space-y-4">
+                  {settings.map(s => (
+                    <SettingRow key={s.key} setting={s} onSave={updateSetting} />
+                  ))}
+                </div>
+              </Card>
+              <ChangeAdminPasswordCard />
+            </div>
           </TabsContent>
         </Tabs>
       </main>
@@ -921,4 +924,63 @@ const SettingRow = ({ setting, onSave }: { setting: SiteSetting; onSave: (k: str
   );
 };
 
+const ChangeAdminPasswordCard = () => {
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [confirmPwd, setConfirmPwd] = useState("");
+  const [show, setShow] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const submit = async () => {
+    if (next !== confirmPwd) { toast.error("Les nouveaux mots de passe ne correspondent pas"); return; }
+    if (next.length < 12) { toast.error("12 caractères minimum"); return; }
+    if (!/[A-Z]/.test(next) || !/[a-z]/.test(next) || !/[0-9]/.test(next) || !/[^A-Za-z0-9]/.test(next)) {
+      toast.error("Doit contenir majuscule, minuscule, chiffre et caractère spécial"); return;
+    }
+    setLoading(true);
+    const { data, error } = await supabase.functions.invoke("change-admin-password", {
+      body: { currentPassword: current, newPassword: next },
+    });
+    setLoading(false);
+    if (error || (data as any)?.error) {
+      toast.error((data as any)?.error || error?.message || "Échec de la modification");
+      return;
+    }
+    toast.success("Mot de passe modifié avec succès");
+    setCurrent(""); setNext(""); setConfirmPwd("");
+  };
+
+  return (
+    <Card className="p-4">
+      <h3 className="font-semibold mb-1 flex items-center gap-2"><KeyRound className="w-4 h-4" /> Changer mon mot de passe</h3>
+      <p className="text-xs text-muted-foreground mb-4">Pour la sécurité, votre mot de passe actuel est requis.</p>
+      <div className="space-y-3">
+        <div>
+          <Label>Mot de passe actuel</Label>
+          <Input type={show ? "text" : "password"} value={current} onChange={(e) => setCurrent(e.target.value)} autoComplete="current-password" />
+        </div>
+        <div>
+          <Label>Nouveau mot de passe</Label>
+          <Input type={show ? "text" : "password"} value={next} onChange={(e) => setNext(e.target.value)} autoComplete="new-password" />
+        </div>
+        <div>
+          <Label>Confirmer le nouveau mot de passe</Label>
+          <Input type={show ? "text" : "password"} value={confirmPwd} onChange={(e) => setConfirmPwd(e.target.value)} autoComplete="new-password" />
+        </div>
+        <div className="flex items-center justify-between">
+          <Button type="button" variant="ghost" size="sm" onClick={() => setShow(!show)} className="gap-1">
+            {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            {show ? "Masquer" : "Afficher"}
+          </Button>
+          <Button variant="gold" onClick={submit} disabled={loading || !current || !next || !confirmPwd}>
+            {loading && <Loader2 className="w-4 h-4 animate-spin mr-1" />}Mettre à jour
+          </Button>
+        </div>
+        <p className="text-[11px] text-muted-foreground">12 car. min, avec majuscule, minuscule, chiffre et caractère spécial.</p>
+      </div>
+    </Card>
+  );
+};
+
 export default Admin;
+
