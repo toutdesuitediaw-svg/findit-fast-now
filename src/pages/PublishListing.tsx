@@ -521,7 +521,7 @@ const PublishListing = () => {
                 onClick={async () => {
                   setForm((f) => ({ ...f, is_premium: false }));
                   setConfirmPremiumOpen(false);
-                  await publishListing();
+                  await publishListing(false);
                 }}
               >
                 Publier sans Premium
