@@ -75,19 +75,14 @@ const PublishListing = () => {
     });
   }, []);
 
-  const uploadPhoto = async (id: string) => {
+  const uploadPhoto = async (id: string, file: File) => {
     if (!user) return;
     setPhotos((prev) =>
       prev.map((p) => (p.id === id ? { ...p, status: "uploading", error: undefined } : p)),
     );
-    const target = photos.find((p) => p.id === id);
-    // Read latest file from state to avoid stale ref
-    setPhotos((prev) => prev); // no-op to satisfy linter
-    const item = target ?? null;
-    if (!item) return;
-    const ext = item.file.name.split(".").pop();
+    const ext = file.name.split(".").pop();
     const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
-    const { error } = await supabase.storage.from("listing-photos").upload(path, item.file);
+    const { error } = await supabase.storage.from("listing-photos").upload(path, file);
     if (error) {
       setPhotos((prev) =>
         prev.map((p) => (p.id === id ? { ...p, status: "error", error: error.message } : p)),
