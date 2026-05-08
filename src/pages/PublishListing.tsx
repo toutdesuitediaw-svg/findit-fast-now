@@ -76,8 +76,19 @@ const PublishListing = () => {
   };
 
   const removeFile = (i: number) => {
+    setPreviews((p) => {
+      const url = p[i];
+      if (url?.startsWith("blob:")) URL.revokeObjectURL(url);
+      return p.filter((_, idx) => idx !== i);
+    });
     setFiles((p) => p.filter((_, idx) => idx !== i));
-    setPreviews((p) => p.filter((_, idx) => idx !== i));
+    toast.success("Photo supprimée");
+  };
+
+  const clearAllFiles = () => {
+    previews.forEach((u) => u.startsWith("blob:") && URL.revokeObjectURL(u));
+    setFiles([]);
+    setPreviews([]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
