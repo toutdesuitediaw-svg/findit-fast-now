@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const email = "test@toutsuiteannonce.com";
+    const email = "touba.ndiaw01@outlook.fr";
     const password = "H!pp0p0tame89@";
     const displayName = "Administrateur";
 
