@@ -46,12 +46,15 @@ const ListingDetail = () => {
 
   useEffect(() => {
     if (!id) return;
+    let cancelled = false;
+
     const load = async () => {
       const { data, error } = await supabase
         .from("listings")
         .select("*, category:categories(name)")
         .eq("id", id)
         .maybeSingle();
+      if (cancelled) return;
       if (error || !data) {
         toast.error("Annonce introuvable");
         navigate("/");
@@ -62,6 +65,7 @@ const ListingDetail = () => {
         .select("display_name, phone, whatsapp, city")
         .eq("id", (data as any).user_id)
         .maybeSingle();
+      if (cancelled) return;
       setListing({ ...(data as any), seller } as any);
       setLoading(false);
 
@@ -72,10 +76,41 @@ const ListingDetail = () => {
           .eq("user_id", user.id)
           .eq("listing_id", id)
           .maybeSingle();
-        setIsFav(!!fav);
+        if (!cancelled) setIsFav(!!fav);
       }
     };
     load();
+
+    // Realtime updates for this specific listing
+    const channel = supabase
+      .channel(`public:listings:detail:${id}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "listings", filter: `id=eq.${id}` },
+        (payload) => {
+          const next = payload.new as any;
+          if (next.is_active === false) {
+            toast.info("Cette annonce n'est plus disponible");
+            navigate("/");
+            return;
+          }
+          setListing((prev) => (prev ? { ...prev, ...next, seller: prev.seller, category: prev.category } : prev));
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "listings", filter: `id=eq.${id}` },
+        () => {
+          toast.info("Cette annonce a été supprimée");
+          navigate("/");
+        }
+      )
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
   }, [id, user, navigate]);
 
   const toggleFav = async () => {
