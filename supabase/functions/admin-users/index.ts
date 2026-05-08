@@ -118,16 +118,28 @@ Deno.serve(async (req) => {
         .maybeSingle();
       if (targetRoles) return json({ error: "Impossible de supprimer un autre administrateur." }, 403);
 
-      // Cleanup user storage files (listing photos + avatar) under `${userId}/`
+      // Cleanup user storage files recursively (listing photos + avatar + sous-dossiers)
       try {
-        const removeFolder = async (prefix: string) => {
-          const { data: files } = await admin.storage.from("listing-photos").list(prefix, { limit: 1000 });
-          if (files && files.length > 0) {
-            const paths = files.map((f) => `${prefix}/${f.name}`);
-            await admin.storage.from("listing-photos").remove(paths);
+        const removeFolderRecursive = async (prefix: string) => {
+          const { data: entries, error: listErr } = await admin.storage
+            .from("listing-photos")
+            .list(prefix, { limit: 1000 });
+          if (listErr || !entries) return;
+          const filePaths: string[] = [];
+          for (const entry of entries) {
+            const fullPath = `${prefix}/${entry.name}`;
+            // Folders have id === null in Supabase storage list responses
+            if ((entry as { id: string | null }).id === null) {
+              await removeFolderRecursive(fullPath);
+            } else {
+              filePaths.push(fullPath);
+            }
+          }
+          if (filePaths.length > 0) {
+            await admin.storage.from("listing-photos").remove(filePaths);
           }
         };
-        await removeFolder(userId);
+        await removeFolderRecursive(userId);
       } catch (e) {
         console.error("storage cleanup failed", e);
       }
