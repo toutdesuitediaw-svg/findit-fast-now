@@ -8,18 +8,37 @@ const Listings = () => {
   const [listings, setListings] = useState<ListingCardData[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    supabase
+  const fetchListings = async () => {
+    const { data } = await supabase
       .from("listings")
       .select("id, title, price, currency, location, images, is_premium")
       .eq("is_active", true)
       .order("is_premium", { ascending: false })
       .order("created_at", { ascending: false })
-      .limit(8)
-      .then(({ data }) => {
-        setListings((data ?? []) as ListingCardData[]);
-        setLoading(false);
-      });
+      .limit(8);
+    setListings((data ?? []) as ListingCardData[]);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchListings();
+
+    // Realtime: refresh when listings change
+    const channel = supabase
+      .channel("public:listings:home")
+      .on("postgres_changes", { event: "*", schema: "public", table: "listings" }, () => {
+        fetchListings();
+      })
+      .subscribe();
+
+    // Fallback: refresh when tab regains focus
+    const onFocus = () => fetchListings();
+    window.addEventListener("focus", onFocus);
+
+    return () => {
+      supabase.removeChannel(channel);
+      window.removeEventListener("focus", onFocus);
+    };
   }, []);
 
   return (

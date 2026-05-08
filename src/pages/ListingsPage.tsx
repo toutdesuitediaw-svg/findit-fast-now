@@ -25,24 +25,46 @@ const ListingsPage = () => {
   }, []);
 
   useEffect(() => {
-    setLoading(true);
-    let query = supabase
-      .from("listings")
-      .select("id, title, price, currency, location, images, is_premium, category:categories(slug)")
-      .eq("is_active", true);
+    let cancelled = false;
 
-    if (q) query = query.ilike("title", `%${q}%`);
+    const fetchListings = async () => {
+      let query = supabase
+        .from("listings")
+        .select("id, title, price, currency, location, images, is_premium, category:categories(slug)")
+        .eq("is_active", true);
 
-    if (sort === "price_asc") query = query.order("price", { ascending: true, nullsFirst: false });
-    else if (sort === "price_desc") query = query.order("price", { ascending: false, nullsFirst: false });
-    else query = query.order("is_premium", { ascending: false }).order("created_at", { ascending: false });
+      if (q) query = query.ilike("title", `%${q}%`);
 
-    query.limit(60).then(({ data }) => {
+      if (sort === "price_asc") query = query.order("price", { ascending: true, nullsFirst: false });
+      else if (sort === "price_desc") query = query.order("price", { ascending: false, nullsFirst: false });
+      else query = query.order("is_premium", { ascending: false }).order("created_at", { ascending: false });
+
+      const { data } = await query.limit(60);
+      if (cancelled) return;
       let rows = (data ?? []) as any[];
       if (cat !== "all") rows = rows.filter((r) => r.category?.slug === cat);
       setListings(rows as ListingCardData[]);
       setLoading(false);
-    });
+    };
+
+    setLoading(true);
+    fetchListings();
+
+    const channel = supabase
+      .channel("public:listings:all")
+      .on("postgres_changes", { event: "*", schema: "public", table: "listings" }, () => {
+        fetchListings();
+      })
+      .subscribe();
+
+    const onFocus = () => fetchListings();
+    window.addEventListener("focus", onFocus);
+
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+      window.removeEventListener("focus", onFocus);
+    };
   }, [q, cat, sort]);
 
   const update = (key: string, value: string) => {
