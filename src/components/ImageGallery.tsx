@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Maximize2, X, ZoomIn, ZoomOut } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight, ImageOff, Maximize2, X, ZoomIn, ZoomOut } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ImageGalleryProps {
   images: string[];
@@ -9,6 +10,22 @@ interface ImageGalleryProps {
   badge?: React.ReactNode;
   topRight?: React.ReactNode;
 }
+
+const FALLBACK = "/placeholder.svg";
+
+const resolveSrc = (src: string): string => {
+  if (!src) return FALLBACK;
+  if (/^(https?:|data:|blob:)/i.test(src) || src.startsWith("/")) return src;
+  const { data } = supabase.storage.from("listing-photos").getPublicUrl(src);
+  return data.publicUrl || FALLBACK;
+};
+
+const handleImgError = (e: React.SyntheticEvent<HTMLImageElement>) => {
+  const img = e.currentTarget;
+  if (img.src.endsWith(FALLBACK)) return;
+  img.src = FALLBACK;
+  img.classList.add("opacity-60");
+};
 
 const ImageGallery = ({ images, alt, badge, topRight }: ImageGalleryProps) => {
   const [active, setActive] = useState(0);
@@ -18,8 +35,12 @@ const ImageGallery = ({ images, alt, badge, topRight }: ImageGalleryProps) => {
   const touchStartX = useRef<number | null>(null);
   const thumbsRef = useRef<HTMLDivElement>(null);
 
-  const hasImages = images && images.length > 0;
-  const total = images?.length ?? 0;
+  const resolved = useMemo(
+    () => (images ?? []).filter(Boolean).map(resolveSrc),
+    [images],
+  );
+  const hasImages = resolved.length > 0;
+  const total = resolved.length;
 
   const go = useCallback(
     (dir: 1 | -1) => {
@@ -77,18 +98,20 @@ const ImageGallery = ({ images, alt, badge, topRight }: ImageGalleryProps) => {
       >
         {hasImages ? (
           <img
-            src={images[active]}
+            src={resolved[active]}
             alt={`${alt} — photo ${active + 1}`}
             className="w-full h-full object-cover cursor-zoom-in transition-transform duration-500 group-hover:scale-[1.02]"
             onClick={() => {
               setZoom(1);
               setOpen(true);
             }}
+            onError={handleImgError}
             loading="eager"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-            Pas de photo
+          <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-muted-foreground">
+            <ImageOff className="w-8 h-8" />
+            <span className="text-sm">Pas de photo</span>
           </div>
         )}
 
@@ -140,7 +163,7 @@ const ImageGallery = ({ images, alt, badge, topRight }: ImageGalleryProps) => {
           ref={thumbsRef}
           className="mt-3 flex gap-2 overflow-x-auto scroll-smooth pb-1 [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:bg-primary/40 [&::-webkit-scrollbar-thumb]:rounded-full"
         >
-          {images.map((src, i) => (
+          {resolved.map((src, i) => (
             <button
               key={i}
               data-idx={i}
@@ -154,7 +177,7 @@ const ImageGallery = ({ images, alt, badge, topRight }: ImageGalleryProps) => {
                   : "border-transparent opacity-70 hover:opacity-100",
               )}
             >
-              <img src={src} alt="" className="w-full h-full object-cover" loading="lazy" />
+              <img src={src} alt="" className="w-full h-full object-cover" loading="lazy" onError={handleImgError} />
             </button>
           ))}
         </div>
@@ -207,9 +230,10 @@ const ImageGallery = ({ images, alt, badge, topRight }: ImageGalleryProps) => {
           >
             {hasImages && (
               <img
-                src={images[active]}
+                src={resolved[active]}
                 alt={`${alt} — photo ${active + 1}`}
                 draggable={false}
+                onError={handleImgError}
                 style={{
                   transform: `scale(${zoom})`,
                   transformOrigin: `${origin.x}% ${origin.y}%`,
@@ -245,7 +269,7 @@ const ImageGallery = ({ images, alt, badge, topRight }: ImageGalleryProps) => {
 
           {total > 1 && (
             <div className="border-t border-border/50 p-3 flex gap-2 overflow-x-auto justify-center">
-              {images.map((src, i) => (
+              {resolved.map((src, i) => (
                 <button
                   key={i}
                   type="button"
@@ -260,7 +284,7 @@ const ImageGallery = ({ images, alt, badge, topRight }: ImageGalleryProps) => {
                       : "border-transparent opacity-60 hover:opacity-100",
                   )}
                 >
-                  <img src={src} alt="" className="w-full h-full object-cover" loading="lazy" />
+                  <img src={src} alt="" className="w-full h-full object-cover" loading="lazy" onError={handleImgError} />
                 </button>
               ))}
             </div>
