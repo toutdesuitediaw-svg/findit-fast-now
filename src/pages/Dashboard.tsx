@@ -104,6 +104,9 @@ const Dashboard = () => {
             <Button variant="gold" onClick={() => navigate("/publier")}>
               <Plus className="w-4 h-4" /> Publier une annonce
             </Button>
+            <Button variant="outlineGold" onClick={() => navigate("/profil")}>
+              Mon profil
+            </Button>
             <Button variant="outlineGold" onClick={async () => { await signOut(); navigate("/"); }}>
               <LogOut className="w-4 h-4" /> Déconnexion
             </Button>

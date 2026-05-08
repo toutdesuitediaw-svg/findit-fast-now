@@ -57,6 +57,9 @@ const Header = () => {
                 <DropdownMenuItem onClick={() => navigate("/dashboard")}>
                   <LayoutDashboard className="w-4 h-4 mr-2" /> Tableau de bord
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/profil")}>
+                  <User className="w-4 h-4 mr-2" /> Mon profil
+                </DropdownMenuItem>
                 {isAdmin && (
                   <DropdownMenuItem onClick={() => navigate("/admin")}>
                     <Shield className="w-4 h-4 mr-2" /> Admin
