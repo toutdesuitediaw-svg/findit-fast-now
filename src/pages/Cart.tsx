@@ -34,6 +34,27 @@ interface SellerMeta {
 const Cart = () => {
   const navigate = useNavigate();
   const { items, updateQuantity, removeItem, clear, total, count, currency } = useCart();
+  const fmt = (n: number) => `${Number(n).toLocaleString("fr-FR")} ${currency}`;
+
+  const handleQtyChange = (id: string, qty: number) => {
+    const item = items.find((i) => i.id === id);
+    if (!item) return;
+    const safeQty = Math.min(99, Math.max(0, qty));
+    if (safeQty === item.quantity) return;
+    updateQuantity(id, safeQty);
+    if (safeQty === 0) {
+      toast.success(`"${item.title}" retiré du panier`);
+      return;
+    }
+    const newTotal = items.reduce(
+      (s, i) => s + i.price * (i.id === id ? safeQty : i.quantity),
+      0,
+    );
+    toast.success(`Quantité : ${safeQty}`, {
+      description: `Nouveau total : ${fmt(newTotal)}`,
+      duration: 1800,
+    });
+  };
   const [loadingCheckout, setLoadingCheckout] = useState(false);
   // listingId -> sellerId
   const [itemSellerMap, setItemSellerMap] = useState<Record<string, string> | null>(null);
@@ -95,7 +116,6 @@ const Cart = () => {
     });
   };
 
-  const fmt = (n: number) => `${Number(n).toLocaleString("fr-FR")} ${currency}`;
 
   const buildMessage = (group: SellerGroup, orderNumber: string) => {
     const lines = [
@@ -277,7 +297,7 @@ const Cart = () => {
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8"
-                      onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                      onClick={() => handleQtyChange(item.id, item.quantity - 1)}
                       disabled={item.quantity <= 1}
                       aria-label="Diminuer"
                     >
@@ -291,10 +311,10 @@ const Cart = () => {
                       onChange={(e) => {
                         const v = parseInt(e.target.value, 10);
                         if (Number.isNaN(v)) return;
-                        updateQuantity(item.id, Math.min(99, Math.max(1, v)));
+                        handleQtyChange(item.id, Math.min(99, Math.max(1, v)));
                       }}
                       onBlur={(e) => {
-                        if (!e.target.value) updateQuantity(item.id, 1);
+                        if (!e.target.value) handleQtyChange(item.id, 1);
                       }}
                       aria-label="Quantité"
                       className="w-12 h-8 text-center text-sm font-medium bg-transparent outline-none focus:ring-2 focus:ring-primary/40 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
@@ -303,7 +323,7 @@ const Cart = () => {
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8"
-                      onClick={() => updateQuantity(item.id, Math.min(99, item.quantity + 1))}
+                      onClick={() => handleQtyChange(item.id, Math.min(99, item.quantity + 1))}
                       disabled={item.quantity >= 99}
                       aria-label="Augmenter"
                     >
