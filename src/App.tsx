@@ -7,6 +7,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import Index from "./pages/Index.tsx";
 import Auth from "./pages/Auth.tsx";
 import Dashboard from "./pages/Dashboard.tsx";
+import Profile from "./pages/Profile.tsx";
 import PublishListing from "./pages/PublishListing.tsx";
 import ListingDetail from "./pages/ListingDetail.tsx";
 import ListingsPage from "./pages/ListingsPage.tsx";
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/profil" element={<RequireAuth><Profile /></RequireAuth>} />
             <Route path="/publier" element={<PublishListing />} />
             <Route path="/annonces" element={<ListingsPage />} />
             <Route path="/annonce/:id" element={<ListingDetail />} />
