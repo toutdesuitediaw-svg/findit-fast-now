@@ -31,6 +31,24 @@ const Cart = () => {
   const { items, updateQuantity, removeItem, clear, total, count, currency } = useCart();
   const [loadingCheckout, setLoadingCheckout] = useState(false);
   const [groups, setGroups] = useState<SellerGroup[] | null>(null);
+  const [selectedSellers, setSelectedSellers] = useState<Set<string>>(new Set());
+  const [contactedSellers, setContactedSellers] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (groups) {
+      setSelectedSellers(new Set(groups.filter((g) => g.whatsapp).map((g) => g.sellerId)));
+      setContactedSellers(new Set());
+    }
+  }, [groups]);
+
+  const toggleSeller = (id: string) => {
+    setSelectedSellers((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   const fmt = (n: number) => `${Number(n).toLocaleString("fr-FR")} ${currency}`;
 
