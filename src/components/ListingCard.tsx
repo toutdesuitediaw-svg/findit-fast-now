@@ -62,8 +62,11 @@ const ListingCard = ({ listing }: { listing: ListingCardData }) => {
         {listing.images[0] ? (
           <img
             src={listing.images[0]}
-            alt={listing.title}
+            alt={`${listing.title}${listing.location ? ` — ${listing.location}` : ""}`}
             loading="lazy"
+            decoding="async"
+            width={400}
+            height={300}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
           />
         ) : (
