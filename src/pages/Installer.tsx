@@ -50,13 +50,12 @@ const Installer = () => {
     setDeferredPrompt(null);
   };
 
+  useEffect(() => {
+    document.title = "Installer l'application TOUT DE SUITE sur iPhone et Android";
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
-      <Helmet>
-        <title>Installer l'application TOUT DE SUITE sur iPhone et Android</title>
-        <meta name="description" content="Guide pas à pas pour installer l'application TOUT DE SUITE sur votre iPhone ou Android. Accès rapide à toutes les annonces du Sénégal." />
-        <link rel="canonical" href="https://www.toutsuitannonce.com/installer" />
-      </Helmet>
 
       <Header />
 
