@@ -1,15 +1,43 @@
 {
   "name": "TOUT DE SUITE — Petites annonces",
   "short_name": "Tout de Suite",
-  "description": "Achetez, vendez et trouvez tout en quelques clics.",
-  "start_url": "/",
+  "description": "Petites annonces gratuites au Sénégal : immobilier, voitures, emploi, électronique, services.",
+  "id": "/",
+  "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "orientation": "portrait",
-  "background_color": "#ffffff",
-  "theme_color": "#f97316",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "lang": "fr-SN",
+  "dir": "ltr",
+  "categories": ["shopping", "business", "lifestyle"],
+  "prefer_related_applications": false,
   "icons": [
-    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Publier une annonce",
+      "short_name": "Publier",
+      "url": "/publier",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Voir les annonces",
+      "short_name": "Annonces",
+      "url": "/annonces",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Mon tableau de bord",
+      "short_name": "Compte",
+      "url": "/dashboard",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
   ]
 }
