@@ -547,7 +547,9 @@ const Admin = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {profiles.map((p) => (
+                    {[...profiles]
+                      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                      .map((p) => (
                       <TableRow key={p.id}>
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-1">
