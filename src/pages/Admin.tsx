@@ -385,12 +385,19 @@ const Admin = () => {
     setResetUser(null);
   };
 
+  const normalizeDeletionConfirmation = (value: string) =>
+    value
+      .trim()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toUpperCase();
+
   const deleteUser = async (p: Profile) => {
     const label = p.display_name || emails[p.id] || p.id;
     if (!confirm(`⚠️ SUPPRESSION DÉFINITIVE\n\nVous êtes sur le point de supprimer définitivement le compte de "${label}".\n\nSeront supprimés sans possibilité de récupération :\n- Le profil et l'accès\n- Toutes les annonces et photos\n- Tous les messages\n- Tous les favoris, transactions et abonnements\n\nContinuer ?`)) return;
-    const typed = prompt(`Pour confirmer la SUPPRESSION DÉFINITIVE du compte "${label}", tapez exactement :\n\nSUPPRESSION DÉFINITIVE`);
+    const typed = prompt(`Pour confirmer la SUPPRESSION DÉFINITIVE du compte "${label}", tapez :\n\nsuppression definitive\n\n(les majuscules et accents ne sont pas obligatoires)`);
     if (typed === null) return;
-    if (typed.trim().toUpperCase() !== "SUPPRESSION DÉFINITIVE") {
+    if (normalizeDeletionConfirmation(typed) !== "SUPPRESSION DEFINITIVE") {
       toast.error("Confirmation incorrecte. Suppression annulée.");
       return;
     }
@@ -570,8 +577,8 @@ const Admin = () => {
                               </Button>
                             )}
                             {p.status !== "banned" ? (
-                              <Button size="sm" variant="ghost" onClick={() => setUserStatus(p.id, "banned")} title="Bannir">
-                                <Trash2 className="w-4 h-4 text-destructive" />
+                              <Button size="sm" variant="ghost" onClick={() => setUserStatus(p.id, "banned")} title="Bannir sans supprimer">
+                                <ShieldOff className="w-4 h-4 text-destructive" />
                               </Button>
                             ) : (
                               <Button size="sm" variant="ghost" onClick={() => setUserStatus(p.id, "active")} title="Débannir">
