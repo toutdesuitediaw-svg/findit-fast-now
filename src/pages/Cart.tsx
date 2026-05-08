@@ -200,6 +200,13 @@ const Cart = () => {
     const orderTotal = orderItems.reduce((s, i) => s + i.price * i.quantity, 0);
 
     const orderNumber = `CMD-${Date.now().toString(36).toUpperCase()}`;
+
+    // Ouvre un onglet WhatsApp pré-rempli pour chaque vendeur sélectionné
+    selected.forEach((g, idx) => {
+      const url = waLink(g, `${orderNumber}-${idx + 1}`);
+      window.open(url, "_blank", "noopener,noreferrer");
+    });
+
     const order = {
       orderNumber,
       items: orderItems,
