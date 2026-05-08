@@ -1,21 +1,133 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Minus, Plus, ShoppingCart, Trash2 } from "lucide-react";
+import { Loader2, MessageCircle, Minus, Plus, ShoppingCart, Trash2 } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { useCart } from "@/hooks/useCart";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useCart, type CartItem } from "@/hooks/useCart";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+
+interface SellerGroup {
+  sellerId: string;
+  sellerName: string;
+  whatsapp: string | null;
+  items: CartItem[];
+  subtotal: number;
+}
 
 const Cart = () => {
   const navigate = useNavigate();
   const { items, updateQuantity, removeItem, clear, total, count, currency } = useCart();
+  const [loadingCheckout, setLoadingCheckout] = useState(false);
+  const [groups, setGroups] = useState<SellerGroup[] | null>(null);
 
   const fmt = (n: number) => `${Number(n).toLocaleString("fr-FR")} ${currency}`;
 
-  const checkout = () => {
+  const buildMessage = (group: SellerGroup, orderNumber: string) => {
+    const lines = [
+      `Bonjour ${group.sellerName},`,
+      ``,
+      `Je souhaite commander sur TOUT DE SUITE (n° ${orderNumber}) :`,
+      ``,
+      ...group.items.map(
+        (i) => `• ${i.title} × ${i.quantity} — ${fmt(i.price * i.quantity)}`
+      ),
+      ``,
+      `Total : ${fmt(group.subtotal)}`,
+      ``,
+      `Pouvez-vous confirmer la disponibilité et le mode de livraison ? Merci !`,
+    ];
+    return lines.join("\n");
+  };
+
+  const waLink = (group: SellerGroup, orderNumber: string) => {
+    const number = (group.whatsapp ?? "").replace(/[^0-9+]/g, "").replace(/^\+/, "");
+    return `https://wa.me/${number}?text=${encodeURIComponent(buildMessage(group, orderNumber))}`;
+  };
+
+  const checkout = async () => {
     if (items.length === 0) return;
-    const orderNumber = `CMD-${Date.now().toString(36).toUpperCase()}-${Math.floor(Math.random() * 1000).toString().padStart(3, "0")}`;
+    setLoadingCheckout(true);
+
+    const { data: listings, error } = await supabase
+      .from("listings")
+      .select("id, user_id, seller:profiles!listings_user_id_fkey(display_name, whatsapp, phone)")
+      .in("id", items.map((i) => i.id));
+
+    if (error) {
+      setLoadingCheckout(false);
+      toast.error("Impossible de contacter le vendeur");
+      return;
+    }
+
+    const map = new Map<string, SellerGroup>();
+    for (const item of items) {
+      const listing = listings?.find((l) => l.id === item.id) as any;
+      const sellerId = listing?.user_id ?? "unknown";
+      const sellerName = listing?.seller?.display_name ?? "Vendeur";
+      const whatsapp = listing?.seller?.whatsapp ?? listing?.seller?.phone ?? null;
+      const existing = map.get(sellerId);
+      if (existing) {
+        existing.items.push(item);
+        existing.subtotal += item.price * item.quantity;
+      } else {
+        map.set(sellerId, {
+          sellerId,
+          sellerName,
+          whatsapp,
+          items: [item],
+          subtotal: item.price * item.quantity,
+        });
+      }
+    }
+
+    const list = Array.from(map.values());
+    setLoadingCheckout(false);
+
+    const reachable = list.filter((g) => g.whatsapp);
+    if (reachable.length === 0) {
+      toast.error("Aucun vendeur n'a renseigné de numéro WhatsApp.");
+      return;
+    }
+
+    const orderNumber = `CMD-${Date.now().toString(36).toUpperCase()}-${Math.floor(
+      Math.random() * 1000
+    ).toString().padStart(3, "0")}`;
+
+    if (list.length === 1 && reachable.length === 1) {
+      window.open(waLink(reachable[0], orderNumber), "_blank", "noopener,noreferrer");
+      const order = {
+        orderNumber,
+        items: [...items],
+        total,
+        currency,
+        date: new Date().toISOString(),
+      };
+      clear();
+      navigate("/commande/confirmation", { state: order });
+      return;
+    }
+
+    setGroups(list);
+  };
+
+  const contactSeller = (group: SellerGroup) => {
+    const orderNumber = `CMD-${Date.now().toString(36).toUpperCase()}`;
+    window.open(waLink(group, orderNumber), "_blank", "noopener,noreferrer");
+  };
+
+  const finishMultiSeller = () => {
+    const orderNumber = `CMD-${Date.now().toString(36).toUpperCase()}`;
     const order = {
       orderNumber,
       items: [...items],
@@ -23,7 +135,7 @@ const Cart = () => {
       currency,
       date: new Date().toISOString(),
     };
-    toast.success("Commande validée !");
+    setGroups(null);
     clear();
     navigate("/commande/confirmation", { state: order });
   };
@@ -131,17 +243,65 @@ const Cart = () => {
                 <span className="font-semibold">Total</span>
                 <span className="text-2xl font-bold text-gradient-gold">{fmt(total)}</span>
               </div>
-              <Button variant="gold" className="w-full" onClick={checkout}>
-                Valider la commande
+              <Button variant="gold" className="w-full" onClick={checkout} disabled={loadingCheckout}>
+                {loadingCheckout ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <MessageCircle className="w-4 h-4" /> Valider via WhatsApp
+                  </>
+                )}
               </Button>
               <p className="text-xs text-muted-foreground text-center">
-                Le paiement et la livraison sont organisés directement avec le vendeur.
+                Un message pré-rempli sera envoyé au vendeur pour finaliser la commande.
               </p>
             </aside>
           </div>
         )}
       </main>
       <Footer />
+
+      <Dialog open={!!groups} onOpenChange={(o) => !o && setGroups(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Plusieurs vendeurs à contacter</DialogTitle>
+            <DialogDescription>
+              Votre panier contient des articles de différents vendeurs. Contactez chacun
+              d'eux sur WhatsApp pour finaliser votre commande.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 max-h-[50vh] overflow-y-auto">
+            {groups?.map((g) => (
+              <div
+                key={g.sellerId}
+                className="border border-border rounded-xl p-3 flex items-center gap-3"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold line-clamp-1">{g.sellerName}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {g.items.length} article{g.items.length > 1 ? "s" : ""} · {fmt(g.subtotal)}
+                  </p>
+                </div>
+                {g.whatsapp ? (
+                  <Button variant="gold" size="sm" onClick={() => contactSeller(g)}>
+                    <MessageCircle className="w-4 h-4" /> Contacter
+                  </Button>
+                ) : (
+                  <span className="text-xs text-muted-foreground">Pas de WhatsApp</span>
+                )}
+              </div>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setGroups(null)}>
+              Annuler
+            </Button>
+            <Button variant="outlineGold" onClick={finishMultiSeller}>
+              J'ai contacté les vendeurs
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
