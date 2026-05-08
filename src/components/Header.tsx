@@ -71,9 +71,9 @@ const Header = () => {
               Se connecter
             </Button>
           )}
-          <Button variant="gold" onClick={() => navigate(user ? "/publier" : "/auth")}>
-            Publier une annonce
-            <Plus className="w-4 h-4" />
+          <Button variant="gold" onClick={() => navigate("/panier")}>
+            Panier
+            <ShoppingCart className="w-4 h-4" />
           </Button>
         </div>
 
