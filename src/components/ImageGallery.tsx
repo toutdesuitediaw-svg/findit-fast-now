@@ -12,6 +12,7 @@ interface ImageGalleryProps {
 }
 
 const FALLBACK = "/placeholder.svg";
+export const MAX_GALLERY_IMAGES = 8;
 
 const resolveSrc = (src: string): string => {
   if (!src) return FALLBACK;
