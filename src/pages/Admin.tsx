@@ -540,6 +540,7 @@ const Admin = () => {
                       <TableHead>Nom</TableHead>
                       <TableHead>Email</TableHead>
                       <TableHead>Téléphone</TableHead>
+                      <TableHead>Inscription</TableHead>
                       <TableHead>Statut</TableHead>
                       <TableHead>Rôle</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
@@ -556,7 +557,10 @@ const Admin = () => {
                           <div className="text-xs text-muted-foreground">{p.city ?? ""}</div>
                         </TableCell>
                         <TableCell className="text-sm">{emails[p.id] ?? "—"}</TableCell>
-                        <TableCell>{p.phone ?? "—"}</TableCell>
+                         <TableCell>{p.phone ?? "—"}</TableCell>
+                        <TableCell className="text-xs whitespace-nowrap">
+                          {new Date(p.created_at).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}
+                        </TableCell>
                         <TableCell>
                           <Badge variant={p.status === "active" ? "default" : p.status === "suspended" ? "secondary" : "destructive"}>
                             {p.status}
