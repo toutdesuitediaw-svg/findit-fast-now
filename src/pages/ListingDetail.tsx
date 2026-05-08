@@ -13,6 +13,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ImageGallery from "@/components/ImageGallery";
 import { toast } from "sonner";
+import { useSEO, SITE_URL } from "@/lib/seo";
 
 interface ListingDetail {
   id: string;
@@ -173,7 +174,6 @@ const ListingDetail = () => {
   const phone = listing.seller?.whatsapp || listing.seller?.phone;
   const waNumber = phone?.replace(/[^0-9+]/g, "");
   const waMsg = encodeURIComponent(`Bonjour, je suis intéressé par votre annonce "${listing.title}" sur TOUT DE SUITE.`);
-
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
