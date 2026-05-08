@@ -387,8 +387,14 @@ const Admin = () => {
 
   const deleteUser = async (p: Profile) => {
     const label = p.display_name || emails[p.id] || p.id;
-    if (!confirm(`⚠️ Supprimer DÉFINITIVEMENT le compte de "${label}" ?\n\nCette action est irréversible et supprimera :\n- Le profil\n- Toutes les annonces\n- Tous les messages\n- Tous les favoris`)) return;
-    if (!confirm("Êtes-vous absolument certain ? Cette action ne peut pas être annulée.")) return;
+    if (!confirm(`⚠️ SUPPRESSION DÉFINITIVE\n\nVous êtes sur le point de supprimer définitivement le compte de "${label}".\n\nSeront supprimés sans possibilité de récupération :\n- Le profil et l'accès\n- Toutes les annonces et photos\n- Tous les messages\n- Tous les favoris, transactions et abonnements\n\nContinuer ?`)) return;
+    const typed = prompt(`Pour confirmer la SUPPRESSION DÉFINITIVE du compte "${label}", tapez exactement :\n\nSUPPRESSION DÉFINITIVE`);
+    if (typed === null) return;
+    if (typed.trim().toUpperCase() !== "SUPPRESSION DÉFINITIVE") {
+      toast.error("Confirmation incorrecte. Suppression annulée.");
+      return;
+    }
+    if (!confirm(`Dernière confirmation : supprimer DÉFINITIVEMENT "${label}" ? Cette action est irréversible.`)) return;
     const { data, error } = await supabase.functions.invoke("admin-users", {
       body: { action: "delete", userId: p.id },
     });
