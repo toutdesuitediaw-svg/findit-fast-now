@@ -1,37 +1,92 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import ListingCard, { ListingCardData } from "./ListingCard";
+
+const SELECT = "id, title, price, currency, location, images, is_premium";
+
+const sortListings = (arr: ListingCardData[]) =>
+  [...arr].sort((a, b) => Number(b.is_premium) - Number(a.is_premium));
 
 const Listings = () => {
   const [listings, setListings] = useState<ListingCardData[]>([]);
   const [loading, setLoading] = useState(true);
+  const initializedRef = useRef(false);
 
   const fetchListings = async () => {
     const { data } = await supabase
       .from("listings")
-      .select("id, title, price, currency, location, images, is_premium")
+      .select(SELECT)
       .eq("is_active", true)
       .order("is_premium", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(8);
     setListings((data ?? []) as ListingCardData[]);
     setLoading(false);
+    initializedRef.current = true;
   };
 
   useEffect(() => {
     fetchListings();
 
-    // Realtime: refresh when listings change
     const channel = supabase
       .channel("public:listings:home")
-      .on("postgres_changes", { event: "*", schema: "public", table: "listings" }, () => {
-        fetchListings();
-      })
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "listings" },
+        async (payload) => {
+          const row = payload.new as any;
+          if (!row.is_active) return;
+          const { data } = await supabase.from("listings").select(SELECT).eq("id", row.id).maybeSingle();
+          if (!data) return;
+          setListings((prev) => {
+            if (prev.some((p) => p.id === data.id)) return prev;
+            return sortListings([data as ListingCardData, ...prev]).slice(0, 8);
+          });
+          if (initializedRef.current) {
+            toast.success("Nouvelle annonce publiée", { description: row.title });
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "listings" },
+        (payload) => {
+          const row = payload.new as any;
+          setListings((prev) => {
+            const exists = prev.some((p) => p.id === row.id);
+            if (!row.is_active) return exists ? prev.filter((p) => p.id !== row.id) : prev;
+            if (!exists) return prev;
+            return sortListings(
+              prev.map((p) =>
+                p.id === row.id
+                  ? {
+                      ...p,
+                      title: row.title,
+                      price: row.price,
+                      currency: row.currency,
+                      location: row.location,
+                      images: row.images,
+                      is_premium: row.is_premium,
+                    }
+                  : p
+              )
+            );
+          });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "listings" },
+        (payload) => {
+          const row = payload.old as any;
+          setListings((prev) => prev.filter((p) => p.id !== row.id));
+        }
+      )
       .subscribe();
 
-    // Fallback: refresh when tab regains focus
     const onFocus = () => fetchListings();
     window.addEventListener("focus", onFocus);
 
