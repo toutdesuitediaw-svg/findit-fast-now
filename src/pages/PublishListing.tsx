@@ -143,6 +143,7 @@ const PublishListing = () => {
   const removeFile = (id: string) => {
     setPhotos((prev) => {
       const found = prev.find((p) => p.id === id);
+      if (found?.status === "uploading") cancelledRef.current.add(id);
       if (found?.preview.startsWith("blob:")) URL.revokeObjectURL(found.preview);
       return prev.filter((p) => p.id !== id);
     });
