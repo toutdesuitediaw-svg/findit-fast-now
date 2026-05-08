@@ -46,7 +46,7 @@ const ListingDetail = () => {
     const load = async () => {
       const { data, error } = await supabase
         .from("listings")
-        .select("*, category:categories(name), seller:profiles!listings_user_id_fkey(display_name, phone, whatsapp, city)")
+        .select("*, category:categories(name)")
         .eq("id", id)
         .maybeSingle();
       if (error || !data) {
@@ -54,7 +54,12 @@ const ListingDetail = () => {
         navigate("/");
         return;
       }
-      setListing(data as any);
+      const { data: seller } = await supabase
+        .from("profiles")
+        .select("display_name, phone, whatsapp, city")
+        .eq("id", (data as any).user_id)
+        .maybeSingle();
+      setListing({ ...(data as any), seller } as any);
       setLoading(false);
 
       if (user) {

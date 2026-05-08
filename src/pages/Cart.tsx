@@ -125,7 +125,7 @@ const Cart = () => {
 
     const { data: listings, error } = await supabase
       .from("listings")
-      .select("id, user_id, seller:profiles!listings_user_id_fkey(display_name, whatsapp, phone)")
+      .select("id, user_id")
       .in("id", items.map((i) => i.id));
 
     if (error) {
@@ -134,13 +134,22 @@ const Cart = () => {
       return;
     }
 
+    const sellerIdSet = Array.from(new Set((listings ?? []).map((l: any) => l.user_id)));
+    const { data: sellers } = await supabase
+      .from("profiles")
+      .select("id, display_name, whatsapp, phone")
+      .in("id", sellerIdSet);
+    const sellerById: Record<string, any> = {};
+    for (const s of (sellers ?? []) as any[]) sellerById[s.id] = s;
+
     const map: Record<string, string> = {};
     const meta: Record<string, SellerMeta> = {};
     for (const l of (listings ?? []) as any[]) {
       map[l.id] = l.user_id;
+      const s = sellerById[l.user_id];
       meta[l.user_id] = {
-        sellerName: l.seller?.display_name ?? "Vendeur",
-        whatsapp: l.seller?.whatsapp ?? l.seller?.phone ?? null,
+        sellerName: s?.display_name ?? "Vendeur",
+        whatsapp: s?.whatsapp ?? s?.phone ?? null,
       };
     }
     setItemSellerMap(map);
