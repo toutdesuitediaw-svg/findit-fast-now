@@ -15,6 +15,7 @@ import Logo from "@/components/Logo";
 const emailSchema = z.string().trim().email("Email invalide").max(255);
 const passwordSchema = z.string().min(6, "Au moins 6 caractères").max(72);
 const nameSchema = z.string().trim().min(2, "Au moins 2 caractères").max(80);
+const whatsappSchema = z.string().trim().regex(/^\+?[0-9\s-]{8,20}$/, "Numéro WhatsApp invalide");
 
 const Auth = () => {
   const navigate = useNavigate();
