@@ -81,6 +81,13 @@ const ListingCard = ({ listing }: { listing: ListingCardData }) => {
         >
           <Heart className={`w-4 h-4 ${isFav ? "fill-primary text-primary" : "text-foreground"}`} />
         </button>
+        <button
+          aria-label="Signaler"
+          onClick={(e) => { e.stopPropagation(); setReportOpen(true); }}
+          className="absolute top-3 right-14 w-9 h-9 rounded-full bg-background/80 backdrop-blur flex items-center justify-center border border-border hover:bg-destructive/20 hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+        >
+          <Flag className="w-4 h-4" />
+        </button>
       </div>
       <div className="p-4 space-y-1">
         <h3 className="font-semibold text-foreground line-clamp-1">{listing.title}</h3>
