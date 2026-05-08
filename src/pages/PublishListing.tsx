@@ -64,6 +64,7 @@ const PublishListing = () => {
     is_premium: false,
   });
   const [busy, setBusy] = useState(false);
+  const [confirmPremiumOpen, setConfirmPremiumOpen] = useState(false);
 
   const doneCount = photos.filter((p) => p.status === "done").length;
   const errorCount = photos.filter((p) => p.status === "error").length;
