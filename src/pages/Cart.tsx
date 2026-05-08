@@ -116,7 +116,6 @@ const Cart = () => {
     });
   };
 
-  const fmt = (n: number) => `${Number(n).toLocaleString("fr-FR")} ${currency}`;
 
   const buildMessage = (group: SellerGroup, orderNumber: string) => {
     const lines = [
