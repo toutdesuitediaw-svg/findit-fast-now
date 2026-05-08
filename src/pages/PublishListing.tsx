@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
-import { Check, ImagePlus, Loader2, RotateCw, Trash2, TriangleAlert, X } from "lucide-react";
+import { Check, ImagePlus, Loader2, RotateCw, Sparkles, Star, Trash2, TriangleAlert, X, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -10,10 +10,23 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { toast } from "sonner";
 import { MAX_GALLERY_IMAGES } from "@/components/ImageGallery";
+
+const PREMIUM_PRICE_FCFA = 2000;
+const PREMIUM_DURATION_DAYS = 30;
 
 const schema = z.object({
   title: z.string().trim().min(3, "Au moins 3 caractères").max(120),
@@ -51,6 +64,7 @@ const PublishListing = () => {
     is_premium: false,
   });
   const [busy, setBusy] = useState(false);
+  const [confirmPremiumOpen, setConfirmPremiumOpen] = useState(false);
 
   const doneCount = photos.filter((p) => p.status === "done").length;
   const errorCount = photos.filter((p) => p.status === "error").length;
@@ -159,20 +173,29 @@ const PublishListing = () => {
     setPhotos([]);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) return;
-
+  const validateForm = (): boolean => {
     const result = schema.safeParse(form);
-    if (!result.success) return toast.error(result.error.issues[0].message);
-    if (photos.length === 0) return toast.error("Ajoutez au moins une photo");
+    if (!result.success) {
+      toast.error(result.error.issues[0].message);
+      return false;
+    }
+    if (photos.length === 0) {
+      toast.error("Ajoutez au moins une photo");
+      return false;
+    }
     if (photos.some((p) => p.status === "uploading" || p.status === "pending")) {
-      return toast.error("Patientez la fin de l'upload des photos");
+      toast.error("Patientez la fin de l'upload des photos");
+      return false;
     }
     if (photos.some((p) => p.status === "error")) {
-      return toast.error("Corrigez les photos en erreur ou supprimez-les");
+      toast.error("Corrigez les photos en erreur ou supprimez-les");
+      return false;
     }
+    return true;
+  };
 
+  const publishListing = async () => {
+    if (!user) return;
     setBusy(true);
     const uploadedUrls = photos.map((p) => p.url!).filter(Boolean);
 
@@ -193,8 +216,19 @@ const PublishListing = () => {
 
     setBusy(false);
     if (error) return toast.error(error.message);
-    toast.success("Annonce publiée !");
+    toast.success(form.is_premium ? "Annonce Premium publiée !" : "Annonce publiée !");
     navigate(`/annonce/${inserted.id}`);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    if (!validateForm()) return;
+    if (form.is_premium) {
+      setConfirmPremiumOpen(true);
+      return;
+    }
+    await publishListing();
   };
 
   if (authLoading || !user) {
@@ -350,22 +384,135 @@ const PublishListing = () => {
             </div>
           </div>
 
-          <div className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-primary/10 to-transparent border border-primary/30">
-            <div>
-              <Label htmlFor="premium" className="font-semibold">Annonce Premium ⭐</Label>
-              <p className="text-xs text-muted-foreground mt-1">Mise en avant et badge doré</p>
+          <div
+            className={
+              "rounded-xl border p-5 transition-colors " +
+              (form.is_premium
+                ? "border-primary bg-gradient-to-br from-primary/15 via-primary/5 to-transparent shadow-[0_0_0_1px_hsl(var(--primary)/0.4)]"
+                : "border-border bg-card")
+            }
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-lg bg-primary/15 text-primary flex items-center justify-center shrink-0">
+                  <Star className="w-5 h-5 fill-primary" />
+                </div>
+                <div>
+                  <Label htmlFor="premium" className="font-semibold text-base flex items-center gap-2">
+                    Annonce Premium
+                    <span className="text-xs font-normal text-muted-foreground">
+                      {PREMIUM_PRICE_FCFA.toLocaleString("fr-FR")} FCFA · {PREMIUM_DURATION_DAYS} jours
+                    </span>
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Boostez la visibilité de votre annonce et vendez plus vite.
+                  </p>
+                </div>
+              </div>
+              <Switch
+                id="premium"
+                checked={form.is_premium}
+                onCheckedChange={(c) => setForm({ ...form, is_premium: c })}
+              />
             </div>
-            <Switch id="premium" checked={form.is_premium} onCheckedChange={(c) => setForm({ ...form, is_premium: c })} />
+
+            <ul className="mt-4 grid sm:grid-cols-2 gap-2 text-sm">
+              <li className="flex items-start gap-2">
+                <Sparkles className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                <span>Badge doré « Premium » bien visible</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <Zap className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                <span>Mise en avant en haut des résultats</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <Check className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                <span>Jusqu'à 5× plus de vues</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <Check className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                <span>Affichage sur la page d'accueil</span>
+              </li>
+            </ul>
           </div>
 
           <div className="flex gap-3">
             <Button type="button" variant="outlineGold" onClick={() => navigate(-1)} className="flex-1">Annuler</Button>
             <Button type="submit" variant="gold" className="flex-1" disabled={busy}>
               {busy && <Loader2 className="w-4 h-4 animate-spin" />}
-              Publier l'annonce
+              {form.is_premium
+                ? `Publier en Premium · ${PREMIUM_PRICE_FCFA.toLocaleString("fr-FR")} FCFA`
+                : "Publier l'annonce"}
             </Button>
           </div>
         </form>
+
+        <AlertDialog open={confirmPremiumOpen} onOpenChange={setConfirmPremiumOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <Star className="w-5 h-5 text-primary fill-primary" />
+                Confirmer la publication Premium
+              </AlertDialogTitle>
+              <AlertDialogDescription asChild>
+                <div className="space-y-3 text-sm">
+                  <p>
+                    Vous êtes sur le point de publier une annonce <strong>Premium</strong> pour{" "}
+                    <strong>{PREMIUM_PRICE_FCFA.toLocaleString("fr-FR")} FCFA</strong> pendant{" "}
+                    <strong>{PREMIUM_DURATION_DAYS} jours</strong>.
+                  </p>
+                  <div className="rounded-lg border border-border bg-muted/40 p-3">
+                    <p className="font-semibold text-foreground mb-2">Avantages inclus :</p>
+                    <ul className="space-y-1.5">
+                      <li className="flex items-start gap-2">
+                        <Sparkles className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                        <span>Badge doré « Premium »</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <Zap className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                        <span>Mise en avant dans les résultats</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <Check className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                        <span>Affichage prioritaire sur la page d'accueil</span>
+                      </li>
+                    </ul>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Le paiement vous sera demandé après publication. Vous pouvez aussi désactiver
+                    l'option pour publier gratuitement.
+                  </p>
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={busy}>Modifier</AlertDialogCancel>
+              <Button
+                variant="outlineGold"
+                disabled={busy}
+                onClick={async () => {
+                  setForm((f) => ({ ...f, is_premium: false }));
+                  setConfirmPremiumOpen(false);
+                  await publishListing();
+                }}
+              >
+                Publier sans Premium
+              </Button>
+              <AlertDialogAction
+                disabled={busy}
+                onClick={async (e) => {
+                  e.preventDefault();
+                  setConfirmPremiumOpen(false);
+                  await publishListing();
+                }}
+              >
+                {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Star className="w-4 h-4" />}
+                Confirmer ({PREMIUM_PRICE_FCFA.toLocaleString("fr-FR")} FCFA)
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
       </main>
       <Footer />
     </div>
