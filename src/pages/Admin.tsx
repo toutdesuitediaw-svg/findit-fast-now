@@ -575,6 +575,11 @@ const Admin = () => {
                             <Button size="sm" variant={isUserAdmin(p.id) ? "outline" : "gold"} onClick={() => toggleAdmin(p.id)}>
                               {isUserAdmin(p.id) ? "Retirer admin" : "Promouvoir"}
                             </Button>
+                            {!isUserAdmin(p.id) && p.id !== user?.id && (
+                              <Button size="sm" variant="destructive" onClick={() => deleteUser(p)} title="Supprimer définitivement" className="gap-1">
+                                <Trash2 className="w-3.5 h-3.5" /> Supprimer
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
