@@ -20,6 +20,7 @@ const ListingCard = ({ listing }: { listing: ListingCardData }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [isFav, setIsFav] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
 
   useEffect(() => {
     if (!user) return;
