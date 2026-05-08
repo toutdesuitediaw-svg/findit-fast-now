@@ -173,20 +173,29 @@ const PublishListing = () => {
     setPhotos([]);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) return;
-
+  const validateForm = (): boolean => {
     const result = schema.safeParse(form);
-    if (!result.success) return toast.error(result.error.issues[0].message);
-    if (photos.length === 0) return toast.error("Ajoutez au moins une photo");
+    if (!result.success) {
+      toast.error(result.error.issues[0].message);
+      return false;
+    }
+    if (photos.length === 0) {
+      toast.error("Ajoutez au moins une photo");
+      return false;
+    }
     if (photos.some((p) => p.status === "uploading" || p.status === "pending")) {
-      return toast.error("Patientez la fin de l'upload des photos");
+      toast.error("Patientez la fin de l'upload des photos");
+      return false;
     }
     if (photos.some((p) => p.status === "error")) {
-      return toast.error("Corrigez les photos en erreur ou supprimez-les");
+      toast.error("Corrigez les photos en erreur ou supprimez-les");
+      return false;
     }
+    return true;
+  };
 
+  const publishListing = async () => {
+    if (!user) return;
     setBusy(true);
     const uploadedUrls = photos.map((p) => p.url!).filter(Boolean);
 
@@ -207,8 +216,19 @@ const PublishListing = () => {
 
     setBusy(false);
     if (error) return toast.error(error.message);
-    toast.success("Annonce publiée !");
+    toast.success(form.is_premium ? "Annonce Premium publiée !" : "Annonce publiée !");
     navigate(`/annonce/${inserted.id}`);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    if (!validateForm()) return;
+    if (form.is_premium) {
+      setConfirmPremiumOpen(true);
+      return;
+    }
+    await publishListing();
   };
 
   if (authLoading || !user) {
