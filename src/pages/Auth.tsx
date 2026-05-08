@@ -140,6 +140,13 @@ const Auth = () => {
                   <Label htmlFor="name">Nom complet</Label>
                   <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Jean Dupont" required={tab === "signup"} />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="whatsapp">Numéro WhatsApp</Label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input id="whatsapp" type="tel" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} placeholder="+229 01 00 00 00 00" className="pl-10" required={tab === "signup"} />
+                  </div>
+                </div>
               </TabsContent>
 
               <div className="space-y-2">
