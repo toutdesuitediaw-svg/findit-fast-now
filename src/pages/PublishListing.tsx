@@ -40,6 +40,8 @@ const PublishListing = () => {
   const { user, loading: authLoading } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
+  // Tracks photos cancelled mid-upload so we ignore their late responses
+  const cancelledRef = useRef<Set<string>>(new Set());
   const [form, setForm] = useState({
     title: "",
     description: "",
