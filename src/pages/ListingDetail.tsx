@@ -113,6 +113,19 @@ const ListingDetail = () => {
     setReportDetails("");
   };
 
+  const handleOrder = () => {
+    if (!listing) return;
+    addItem({
+      id: listing.id,
+      title: listing.title,
+      price: Number(listing.price ?? 0),
+      currency: listing.currency,
+      image: listing.images?.[0],
+    });
+    toast.success("Ajouté au panier");
+    navigate("/panier");
+  };
+
   if (loading || !listing) {
     return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>;
   }
