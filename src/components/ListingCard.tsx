@@ -94,6 +94,7 @@ const ListingCard = ({ listing }: { listing: ListingCardData }) => {
         {listing.location && <p className="text-xs text-muted-foreground">{listing.location}</p>}
         <p className="pt-2 font-bold text-primary text-lg">{price}</p>
       </div>
+      <ReportListingDialog listingId={listing.id} open={reportOpen} onOpenChange={setReportOpen} />
     </article>
   );
 };
