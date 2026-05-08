@@ -179,17 +179,50 @@ const PublishListing = () => {
           </div>
 
           <div className="space-y-2">
-            <Label>Photos * (max 8, 5MB chacune)</Label>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <Label>Photos * (max {MAX_GALLERY_IMAGES}, 5MB chacune)</Label>
+              <div className="flex items-center gap-3">
+                <span
+                  className={
+                    "text-xs font-medium tabular-nums " +
+                    (files.length >= MAX_GALLERY_IMAGES ? "text-destructive" : "text-muted-foreground")
+                  }
+                  aria-live="polite"
+                >
+                  {files.length} / {MAX_GALLERY_IMAGES}
+                </span>
+                {files.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={clearAllFiles}
+                    className="text-xs text-muted-foreground hover:text-destructive underline-offset-2 hover:underline"
+                  >
+                    Tout supprimer
+                  </button>
+                )}
+              </div>
+            </div>
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
               {previews.map((src, i) => (
-                <div key={i} className="relative aspect-square rounded-lg overflow-hidden border border-border">
-                  <img src={src} alt="" className="w-full h-full object-cover" />
-                  <button type="button" onClick={() => removeFile(i)} className="absolute top-1 right-1 w-6 h-6 rounded-full bg-background/90 flex items-center justify-center hover:bg-destructive hover:text-destructive-foreground">
-                    <X className="w-3 h-3" />
+                <div key={src} className="group relative aspect-square rounded-lg overflow-hidden border border-border">
+                  <img src={src} alt={`Photo ${i + 1}`} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  {i === 0 && (
+                    <span className="absolute bottom-1 left-1 text-[10px] font-semibold uppercase tracking-wide bg-primary text-primary-foreground rounded px-1.5 py-0.5">
+                      Couverture
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => removeFile(i)}
+                    aria-label={`Supprimer la photo ${i + 1}`}
+                    className="absolute top-1 right-1 w-7 h-7 rounded-full bg-background/95 shadow-sm border border-border flex items-center justify-center hover:bg-destructive hover:text-destructive-foreground hover:border-destructive transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
               ))}
-              {files.length < 8 && (
+              {files.length < MAX_GALLERY_IMAGES && (
                 <label className="aspect-square rounded-lg border-2 border-dashed border-border hover:border-primary cursor-pointer flex flex-col items-center justify-center text-muted-foreground hover:text-primary transition-colors">
                   <ImagePlus className="w-6 h-6 mb-1" />
                   <span className="text-xs">Ajouter</span>
