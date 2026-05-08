@@ -2,7 +2,7 @@ import Categories from "@/components/Categories";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
-import IOSInstallHint from "@/components/IOSInstallHint";
+
 import Listings from "@/components/Listings";
 import PromoBanner from "@/components/PromoBanner";
 import TrustBar from "@/components/TrustBar";
@@ -36,7 +36,6 @@ const Index = () => {
         <TrustBar />
       </main>
       <WhatsAppBar />
-      <IOSInstallHint />
       <Footer />
     </div>
   );
