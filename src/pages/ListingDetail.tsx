@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Flag, Heart, Loader2, MapPin, MessageCircle, Phone } from "lucide-react";
+import { Flag, Heart, Loader2, MapPin, MessageCircle, Phone, ShoppingCart } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
