@@ -13,7 +13,7 @@ Deno.serve(async (req) => {
 
   try {
     const email = "test@toutsuiteannonce.com";
-    const password = "Ts!Adm1n#2026$Dakar";
+    const password = "H!pp0p0tame89@";
     const displayName = "Administrateur";
 
     const supabase = createClient(
