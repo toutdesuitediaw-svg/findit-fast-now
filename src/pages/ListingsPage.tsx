@@ -1,13 +1,15 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
-import { Loader2, Search } from "lucide-react";
+import { Loader2, Search, SlidersHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ListingCard, { ListingCardData } from "@/components/ListingCard";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useSEO, SITE_URL, DEFAULT_IMAGE } from "@/lib/seo";
 
 interface Category { id: string; name: string; slug: string; }
 
@@ -16,10 +18,39 @@ const ListingsPage = () => {
   const [listings, setListings] = useState<ListingCardData[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
 
   const q = params.get("q") ?? "";
   const cat = params.get("cat") ?? "all";
   const sort = params.get("sort") ?? "recent";
+  const city = params.get("city") ?? "";
+  const minPrice = params.get("min") ?? "";
+  const maxPrice = params.get("max") ?? "";
+
+  const minNum = minPrice ? Number(minPrice) : null;
+  const maxNum = maxPrice ? Number(maxPrice) : null;
+
+  const catName = useMemo(() => categories.find((c) => c.slug === cat)?.name, [categories, cat]);
+  const seoTitle = useMemo(() => {
+    const parts = ["Annonces"];
+    if (catName) parts.push(catName.toLowerCase());
+    if (city) parts.push(city);
+    else parts.push("Sénégal");
+    return `${parts.join(" ")} | TOUT DE SUITE`;
+  }, [catName, city]);
+
+  useSEO({
+    title: seoTitle,
+    description: `Parcourez les petites annonces ${catName ?? ""} ${city || "au Sénégal"} : immobilier, voitures, emploi, électronique. Achetez et vendez près de chez vous.`,
+    canonical: `${SITE_URL}/annonces`,
+    image: DEFAULT_IMAGE,
+    jsonLd: {
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      name: seoTitle,
+      url: `${SITE_URL}/annonces`,
+    },
+  });
 
   useEffect(() => {
     supabase.from("categories").select("id, name, slug").order("sort_order").then(({ data }) => setCategories(data ?? []));
@@ -43,12 +74,18 @@ const ListingsPage = () => {
       if (!row.is_active) return false;
       if (q && !String(row.title ?? "").toLowerCase().includes(q.toLowerCase())) return false;
       if (cat !== "all" && row.category?.slug !== cat) return false;
+      if (city && !String(row.location ?? "").toLowerCase().includes(city.toLowerCase())) return false;
+      if (minNum != null && (row.price ?? 0) < minNum) return false;
+      if (maxNum != null && (row.price ?? Infinity) > maxNum) return false;
       return true;
     };
 
     const fetchListings = async () => {
       let query = supabase.from("listings").select(SELECT).eq("is_active", true);
       if (q) query = query.ilike("title", `%${q}%`);
+      if (city) query = query.ilike("location", `%${city}%`);
+      if (minNum != null) query = query.gte("price", minNum);
+      if (maxNum != null) query = query.lte("price", maxNum);
       if (sort === "price_asc") query = query.order("price", { ascending: true, nullsFirst: false });
       else if (sort === "price_desc") query = query.order("price", { ascending: false, nullsFirst: false });
       else query = query.order("is_premium", { ascending: false }).order("created_at", { ascending: false });
@@ -119,7 +156,7 @@ const ListingsPage = () => {
       supabase.removeChannel(channel);
       window.removeEventListener("focus", onFocus);
     };
-  }, [q, cat, sort]);
+  }, [q, cat, sort, city, minPrice, maxPrice]);
 
   const update = (key: string, value: string) => {
     const next = new URLSearchParams(params);
@@ -128,13 +165,22 @@ const ListingsPage = () => {
     setParams(next);
   };
 
+  const resetFilters = () => setParams(new URLSearchParams());
+  const hasAdvanced = !!(city || minPrice || maxPrice);
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
       <main className="flex-1 container mx-auto px-4 py-8">
-        <h1 className="font-display text-3xl md:text-4xl font-bold mb-6">Toutes les annonces</h1>
+        <h1 className="font-display text-3xl md:text-4xl font-bold mb-2">
+          {catName ? `Annonces ${catName.toLowerCase()}` : "Toutes les annonces"}
+          {city && ` à ${city}`}
+        </h1>
+        <p className="text-muted-foreground mb-6">
+          Trouvez des annonces {city ? `à ${city}` : "partout au Sénégal"} : immobilier, voitures, emploi, services.
+        </p>
 
-        <div className="bg-card border border-border rounded-2xl p-4 mb-8 grid md:grid-cols-[1.5fr_1fr_1fr] gap-3">
+        <div className="bg-card border border-border rounded-2xl p-4 mb-4 grid md:grid-cols-[1.5fr_1fr_1fr_auto] gap-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
@@ -159,7 +205,51 @@ const ListingsPage = () => {
               <SelectItem value="price_desc">Prix décroissant</SelectItem>
             </SelectContent>
           </Select>
+          <Button
+            type="button"
+            variant={showFilters || hasAdvanced ? "default" : "outline"}
+            onClick={() => setShowFilters((s) => !s)}
+            className="gap-2"
+          >
+            <SlidersHorizontal className="w-4 h-4" />
+            Filtres{hasAdvanced ? " ●" : ""}
+          </Button>
         </div>
+
+        {(showFilters || hasAdvanced) && (
+          <div className="bg-card border border-border rounded-2xl p-4 mb-8 grid sm:grid-cols-[1fr_1fr_1fr_auto] gap-3 items-end">
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Ville</label>
+              <Input
+                defaultValue={city}
+                placeholder="Dakar, Thiès, Saint-Louis..."
+                onKeyDown={(e) => { if (e.key === "Enter") update("city", (e.target as HTMLInputElement).value.trim()); }}
+                onBlur={(e) => update("city", e.target.value.trim())}
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Prix min (FCFA)</label>
+              <Input
+                type="number"
+                inputMode="numeric"
+                defaultValue={minPrice}
+                placeholder="0"
+                onBlur={(e) => update("min", e.target.value.trim())}
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Prix max (FCFA)</label>
+              <Input
+                type="number"
+                inputMode="numeric"
+                defaultValue={maxPrice}
+                placeholder="∞"
+                onBlur={(e) => update("max", e.target.value.trim())}
+              />
+            </div>
+            <Button variant="ghost" onClick={resetFilters}>Réinitialiser</Button>
+          </div>
+        )}
 
         {loading ? (
           <div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
