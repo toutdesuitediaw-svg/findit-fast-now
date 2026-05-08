@@ -34,6 +34,27 @@ interface SellerMeta {
 const Cart = () => {
   const navigate = useNavigate();
   const { items, updateQuantity, removeItem, clear, total, count, currency } = useCart();
+  const fmt = (n: number) => `${Number(n).toLocaleString("fr-FR")} ${currency}`;
+
+  const handleQtyChange = (id: string, qty: number) => {
+    const item = items.find((i) => i.id === id);
+    if (!item) return;
+    const safeQty = Math.min(99, Math.max(0, qty));
+    if (safeQty === item.quantity) return;
+    updateQuantity(id, safeQty);
+    if (safeQty === 0) {
+      toast.success(`"${item.title}" retiré du panier`);
+      return;
+    }
+    const newTotal = items.reduce(
+      (s, i) => s + i.price * (i.id === id ? safeQty : i.quantity),
+      0,
+    );
+    toast.success(`Quantité : ${safeQty}`, {
+      description: `Nouveau total : ${fmt(newTotal)}`,
+      duration: 1800,
+    });
+  };
   const [loadingCheckout, setLoadingCheckout] = useState(false);
   // listingId -> sellerId
   const [itemSellerMap, setItemSellerMap] = useState<Record<string, string> | null>(null);
