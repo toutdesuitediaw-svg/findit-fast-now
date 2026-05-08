@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, Loader2, MessageCircle, Minus, Plus, ShoppingCart, Trash2 } from "lucide-react";
+import { Check, Loader2, LogIn, MessageCircle, Minus, Plus, ShoppingCart, Trash2, UserCheck, UserX } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
