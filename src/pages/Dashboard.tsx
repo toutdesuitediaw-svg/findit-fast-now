@@ -113,6 +113,7 @@ const Dashboard = () => {
           <TabsList>
             <TabsTrigger value="listings">Mes annonces ({myListings.length})</TabsTrigger>
             <TabsTrigger value="favorites">Favoris ({favorites.length})</TabsTrigger>
+            <TabsTrigger value="reports">Mes signalements ({reports.length})</TabsTrigger>
           </TabsList>
 
           <TabsContent value="listings" className="mt-6">
