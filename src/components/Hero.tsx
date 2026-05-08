@@ -110,7 +110,7 @@ const Hero = () => {
                   onChange={(e) => setQ(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter") onSearch(); }}
                   placeholder="Que recherchez-vous ?"
-                  className="pl-11 h-12 sm:h-14 bg-transparent border-0 focus-visible:ring-0 text-base placeholder:text-muted-foreground"
+                  className="pl-11 h-12 sm:h-14 bg-transparent border-0 focus-visible:ring-0 text-base text-white placeholder:text-white/70"
                 />
               </div>
               <button onClick={() => navigate("/annonces")} className="flex items-center gap-2 px-4 h-12 sm:h-14 rounded-lg bg-secondary/60 hover:bg-secondary text-left text-sm transition-colors">
