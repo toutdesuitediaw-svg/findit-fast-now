@@ -171,6 +171,39 @@ const Dashboard = () => {
               </div>
             )}
           </TabsContent>
+
+          <TabsContent value="reports" className="mt-6">
+            {reports.length === 0 ? (
+              <EmptyState message="Aucun signalement envoyé" cta="Parcourir les annonces" onCta={() => navigate("/")} />
+            ) : (
+              <div className="space-y-3">
+                {reports.map((r) => (
+                  <article key={r.id} className="rounded-xl bg-card border border-border p-4 flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
+                    <div className="flex items-start gap-3 flex-1">
+                      <Flag className="w-4 h-4 text-destructive mt-1 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="font-medium line-clamp-1">{r.reason}</p>
+                        {r.details && <p className="text-sm text-muted-foreground line-clamp-2">{r.details}</p>}
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {new Date(r.created_at).toLocaleDateString("fr-FR")} · {r.target_type}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={r.status === "open" ? "default" : r.status === "resolved" ? "secondary" : "outline"}>
+                        {r.status === "open" ? "En cours" : r.status === "resolved" ? "Résolu" : r.status}
+                      </Badge>
+                      {r.target_type === "listing" && (
+                        <Button variant="ghost" size="sm" onClick={() => navigate(`/annonce/${r.target_id}`)}>
+                          Voir
+                        </Button>
+                      )}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </TabsContent>
         </Tabs>
       </main>
       <Footer />
