@@ -39,8 +39,7 @@ const PublishListing = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
-  const [files, setFiles] = useState<File[]>([]);
-  const [previews, setPreviews] = useState<string[]>([]);
+  const [photos, setPhotos] = useState<PhotoItem[]>([]);
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -50,6 +49,10 @@ const PublishListing = () => {
     is_premium: false,
   });
   const [busy, setBusy] = useState(false);
+
+  const doneCount = photos.filter((p) => p.status === "done").length;
+  const errorCount = photos.filter((p) => p.status === "error").length;
+  const uploadingCount = photos.filter((p) => p.status === "uploading").length;
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/auth", { replace: true });
