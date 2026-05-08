@@ -104,6 +104,32 @@ Deno.serve(async (req) => {
       return json({ success: true, mode: "email" });
     }
 
+    if (action === "delete") {
+      const { userId } = body;
+      if (!userId) return json({ error: "userId required" }, 400);
+      if (userId === callerId) return json({ error: "Vous ne pouvez pas supprimer votre propre compte ici." }, 400);
+
+      // Prevent deleting other admins
+      const { data: targetRoles } = await admin
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .eq("role", "admin")
+        .maybeSingle();
+      if (targetRoles) return json({ error: "Impossible de supprimer un autre administrateur." }, 403);
+
+      // Cleanup user-owned data
+      await admin.from("favorites").delete().eq("user_id", userId);
+      await admin.from("messages").delete().or(`sender_id.eq.${userId},recipient_id.eq.${userId}`);
+      await admin.from("listings").delete().eq("user_id", userId);
+      await admin.from("user_roles").delete().eq("user_id", userId);
+      await admin.from("profiles").delete().eq("id", userId);
+
+      const { error } = await admin.auth.admin.deleteUser(userId);
+      if (error) return json({ error: error.message }, 400);
+      return json({ success: true });
+    }
+
     return json({ error: "unknown action" }, 400);
   } catch (e) {
     return json({ error: (e as Error).message }, 500);

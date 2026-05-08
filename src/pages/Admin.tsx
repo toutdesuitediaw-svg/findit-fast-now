@@ -385,6 +385,19 @@ const Admin = () => {
     setResetUser(null);
   };
 
+  const deleteUser = async (p: Profile) => {
+    const label = p.display_name || emails[p.id] || p.id;
+    if (!confirm(`⚠️ Supprimer DÉFINITIVEMENT le compte de "${label}" ?\n\nCette action est irréversible et supprimera :\n- Le profil\n- Toutes les annonces\n- Tous les messages\n- Tous les favoris`)) return;
+    if (!confirm("Êtes-vous absolument certain ? Cette action ne peut pas être annulée.")) return;
+    const { data, error } = await supabase.functions.invoke("admin-users", {
+      body: { action: "delete", userId: p.id },
+    });
+    if (error || data?.error) return toast.error(data?.error ?? error?.message ?? "Erreur");
+    toast.success("Compte supprimé définitivement");
+    log("user.delete", "user", p.id, { display_name: p.display_name });
+    loadData();
+  };
+
 
   const updateReport = async (id: string, status: Report["status"]) => {
     const { error } = await supabase.from("reports")
@@ -562,6 +575,11 @@ const Admin = () => {
                             <Button size="sm" variant={isUserAdmin(p.id) ? "outline" : "gold"} onClick={() => toggleAdmin(p.id)}>
                               {isUserAdmin(p.id) ? "Retirer admin" : "Promouvoir"}
                             </Button>
+                            {!isUserAdmin(p.id) && p.id !== user?.id && (
+                              <Button size="sm" variant="destructive" onClick={() => deleteUser(p)} title="Supprimer définitivement" className="gap-1">
+                                <Trash2 className="w-3.5 h-3.5" /> Supprimer
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
