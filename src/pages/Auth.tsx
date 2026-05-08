@@ -36,7 +36,10 @@ const Auth = () => {
     try {
       emailSchema.parse(email);
       passwordSchema.parse(password);
-      if (tab === "signup") nameSchema.parse(name);
+      if (tab === "signup") {
+        nameSchema.parse(name);
+        whatsappSchema.parse(whatsapp);
+      }
     } catch (err) {
       if (err instanceof z.ZodError) {
         toast.error(err.issues[0].message);
@@ -51,7 +54,7 @@ const Auth = () => {
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/dashboard`,
-          data: { full_name: name },
+          data: { full_name: name, whatsapp },
         },
       });
       if (error) toast.error(error.message);
