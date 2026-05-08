@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Check, Loader2, MessageCircle, Minus, Plus, ShoppingCart, Trash2 } from "lucide-react";
 import Header from "@/components/Header";
@@ -26,20 +26,65 @@ interface SellerGroup {
   subtotal: number;
 }
 
+interface SellerMeta {
+  sellerName: string;
+  whatsapp: string | null;
+}
+
 const Cart = () => {
   const navigate = useNavigate();
   const { items, updateQuantity, removeItem, clear, total, count, currency } = useCart();
   const [loadingCheckout, setLoadingCheckout] = useState(false);
-  const [groups, setGroups] = useState<SellerGroup[] | null>(null);
+  // listingId -> sellerId
+  const [itemSellerMap, setItemSellerMap] = useState<Record<string, string> | null>(null);
+  // sellerId -> meta
+  const [sellerMeta, setSellerMeta] = useState<Record<string, SellerMeta>>({});
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedSellers, setSelectedSellers] = useState<Set<string>>(new Set());
   const [contactedSellers, setContactedSellers] = useState<Set<string>>(new Set());
 
+  // Derive groups from live cart items + seller map (recomputes on quantity change)
+  const groups: SellerGroup[] = useMemo(() => {
+    if (!itemSellerMap) return [];
+    const map = new Map<string, SellerGroup>();
+    for (const item of items) {
+      const sellerId = itemSellerMap[item.id] ?? "unknown";
+      const meta = sellerMeta[sellerId] ?? { sellerName: "Vendeur", whatsapp: null };
+      const existing = map.get(sellerId);
+      if (existing) {
+        existing.items.push(item);
+        existing.subtotal += item.price * item.quantity;
+      } else {
+        map.set(sellerId, {
+          sellerId,
+          sellerName: meta.sellerName,
+          whatsapp: meta.whatsapp,
+          items: [item],
+          subtotal: item.price * item.quantity,
+        });
+      }
+    }
+    return Array.from(map.values());
+  }, [items, itemSellerMap, sellerMeta]);
+
+  // When dialog opens, default-select all reachable sellers
   useEffect(() => {
-    if (groups) {
+    if (dialogOpen) {
       setSelectedSellers(new Set(groups.filter((g) => g.whatsapp).map((g) => g.sellerId)));
       setContactedSellers(new Set());
     }
-  }, [groups]);
+  }, [dialogOpen]);
+
+  // Auto-deselect sellers that disappeared (e.g. all their items removed)
+  useEffect(() => {
+    if (!dialogOpen) return;
+    const validIds = new Set(groups.map((g) => g.sellerId));
+    setSelectedSellers((prev) => {
+      const next = new Set([...prev].filter((id) => validIds.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+    if (groups.length === 0) setDialogOpen(false);
+  }, [groups, dialogOpen]);
 
   const toggleSeller = (id: string) => {
     setSelectedSellers((prev) => {
@@ -89,42 +134,39 @@ const Cart = () => {
       return;
     }
 
-    const map = new Map<string, SellerGroup>();
-    for (const item of items) {
-      const listing = listings?.find((l) => l.id === item.id) as any;
-      const sellerId = listing?.user_id ?? "unknown";
-      const sellerName = listing?.seller?.display_name ?? "Vendeur";
-      const whatsapp = listing?.seller?.whatsapp ?? listing?.seller?.phone ?? null;
-      const existing = map.get(sellerId);
-      if (existing) {
-        existing.items.push(item);
-        existing.subtotal += item.price * item.quantity;
-      } else {
-        map.set(sellerId, {
-          sellerId,
-          sellerName,
-          whatsapp,
-          items: [item],
-          subtotal: item.price * item.quantity,
-        });
-      }
+    const map: Record<string, string> = {};
+    const meta: Record<string, SellerMeta> = {};
+    for (const l of (listings ?? []) as any[]) {
+      map[l.id] = l.user_id;
+      meta[l.user_id] = {
+        sellerName: l.seller?.display_name ?? "Vendeur",
+        whatsapp: l.seller?.whatsapp ?? l.seller?.phone ?? null,
+      };
     }
-
-    const list = Array.from(map.values());
+    setItemSellerMap(map);
+    setSellerMeta(meta);
     setLoadingCheckout(false);
 
-    const reachable = list.filter((g) => g.whatsapp);
-    if (reachable.length === 0) {
+    const sellerIds = new Set(Object.values(map));
+    const reachableIds = [...sellerIds].filter((id) => meta[id]?.whatsapp);
+    if (reachableIds.length === 0) {
       toast.error("Aucun vendeur n'a renseigné de numéro WhatsApp.");
       return;
     }
 
-    const orderNumber = `CMD-${Date.now().toString(36).toUpperCase()}-${Math.floor(
-      Math.random() * 1000
-    ).toString().padStart(3, "0")}`;
-
-    if (list.length === 1 && reachable.length === 1) {
-      window.open(waLink(reachable[0], orderNumber), "_blank", "noopener,noreferrer");
+    if (sellerIds.size === 1 && reachableIds.length === 1) {
+      const sellerId = reachableIds[0];
+      const orderNumber = `CMD-${Date.now().toString(36).toUpperCase()}-${Math.floor(
+        Math.random() * 1000
+      ).toString().padStart(3, "0")}`;
+      const group: SellerGroup = {
+        sellerId,
+        sellerName: meta[sellerId].sellerName,
+        whatsapp: meta[sellerId].whatsapp,
+        items: [...items],
+        subtotal: total,
+      };
+      window.open(waLink(group, orderNumber), "_blank", "noopener,noreferrer");
       const order = {
         orderNumber,
         items: [...items],
@@ -137,7 +179,7 @@ const Cart = () => {
       return;
     }
 
-    setGroups(list);
+    setDialogOpen(true);
   };
 
   const contactSeller = (group: SellerGroup) => {
@@ -165,7 +207,7 @@ const Cart = () => {
       currency,
       date: new Date().toISOString(),
     };
-    setGroups(null);
+    setDialogOpen(false);
     selectedItemIds.forEach((id) => removeItem(id));
     navigate("/commande/confirmation", { state: order });
   };
@@ -291,7 +333,7 @@ const Cart = () => {
       </main>
       <Footer />
 
-      <Dialog open={!!groups} onOpenChange={(o) => !o && setGroups(null)}>
+      <Dialog open={dialogOpen} onOpenChange={(o) => !o && setDialogOpen(false)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Sélectionnez les vendeurs à contacter</DialogTitle>
@@ -307,20 +349,20 @@ const Cart = () => {
               type="button"
               className="hover:text-primary underline"
               onClick={() => {
-                const allReachable = groups?.filter((g) => g.whatsapp).map((g) => g.sellerId) ?? [];
+                const allReachable = groups.filter((g) => g.whatsapp).map((g) => g.sellerId) ?? [];
                 setSelectedSellers(
                   selectedSellers.size === allReachable.length ? new Set() : new Set(allReachable)
                 );
               }}
             >
-              {selectedSellers.size === groups?.filter((g) => g.whatsapp).length
+              {selectedSellers.size === groups.filter((g) => g.whatsapp).length
                 ? "Tout désélectionner"
                 : "Tout sélectionner"}
             </button>
           </div>
 
           <div className="space-y-2 max-h-[50vh] overflow-y-auto">
-            {groups?.map((g) => {
+            {groups.map((g) => {
               const checked = selectedSellers.has(g.sellerId);
               const contacted = contactedSellers.has(g.sellerId);
               return (
@@ -370,7 +412,7 @@ const Cart = () => {
           </div>
 
           {(() => {
-            const selected = groups?.filter((g) => selectedSellers.has(g.sellerId)) ?? [];
+            const selected = groups.filter((g) => selectedSellers.has(g.sellerId)) ?? [];
             const itemCount = selected.reduce(
               (s, g) => s + g.items.reduce((n, i) => n + i.quantity, 0),
               0
@@ -394,7 +436,7 @@ const Cart = () => {
             );
           })()}
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setGroups(null)}>
+            <Button variant="ghost" onClick={() => setDialogOpen(false)}>
               Annuler
             </Button>
             <Button
