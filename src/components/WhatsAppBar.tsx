@@ -14,9 +14,19 @@ const WhatsAppBar = () => {
             <div className="text-xs sm:text-sm text-muted-foreground">Support WhatsApp — réponse rapide garantie</div>
           </div>
         </div>
-        <Button variant="gold" className="w-full sm:w-auto">
-          <MessageCircle className="w-4 h-4" />
-          Nous contacter
+        <Button
+          variant="gold"
+          className="w-full sm:w-auto"
+          asChild
+        >
+          <a
+            href="https://wa.me/221784716055"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <MessageCircle className="w-4 h-4" />
+            +221 78 471 60 55
+          </a>
         </Button>
       </div>
     </section>
