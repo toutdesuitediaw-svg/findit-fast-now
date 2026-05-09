@@ -4,9 +4,10 @@ import {
   Loader2, Shield, Trash2, Star, Eye, EyeOff, Plus, Pencil,
   LayoutDashboard, Users, Megaphone, AlertTriangle, FolderTree,
   CreditCard, Settings as SettingsIcon, ShieldCheck, ShieldOff, BadgeCheck,
-  History, CheckCircle2, XCircle, ArrowLeft, LogOut, KeyRound, Mail,
+  History, CheckCircle2, XCircle, ArrowLeft, LogOut, KeyRound, Mail, BarChart3,
 } from "lucide-react";
 import Header from "@/components/Header";
+import PwaAnalyticsTab from "@/components/admin/PwaAnalyticsTab";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
