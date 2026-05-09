@@ -4,9 +4,10 @@ import {
   Loader2, Shield, Trash2, Star, Eye, EyeOff, Plus, Pencil,
   LayoutDashboard, Users, Megaphone, AlertTriangle, FolderTree,
   CreditCard, Settings as SettingsIcon, ShieldCheck, ShieldOff, BadgeCheck,
-  History, CheckCircle2, XCircle, ArrowLeft, LogOut, KeyRound, Mail,
+  History, CheckCircle2, XCircle, ArrowLeft, LogOut, KeyRound, Mail, BarChart3,
 } from "lucide-react";
 import Header from "@/components/Header";
+import PwaAnalyticsTab from "@/components/admin/PwaAnalyticsTab";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -500,8 +501,13 @@ const Admin = () => {
             <TabsTrigger value="moderation"><AlertTriangle className="w-4 h-4 mr-1" />Modération</TabsTrigger>
             <TabsTrigger value="payments"><CreditCard className="w-4 h-4 mr-1" />Paiements</TabsTrigger>
             <TabsTrigger value="categories"><FolderTree className="w-4 h-4 mr-1" />Catégories</TabsTrigger>
+            <TabsTrigger value="analytics"><BarChart3 className="w-4 h-4 mr-1" />Analytics PWA</TabsTrigger>
             <TabsTrigger value="settings"><SettingsIcon className="w-4 h-4 mr-1" />Paramètres</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="analytics">
+            <PwaAnalyticsTab />
+          </TabsContent>
 
           {/* === DASHBOARD === */}
           <TabsContent value="dashboard">
