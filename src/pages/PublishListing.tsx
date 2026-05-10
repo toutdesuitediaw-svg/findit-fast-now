@@ -199,6 +199,19 @@ const PublishListing = () => {
     setBusy(true);
     const uploadedUrls = photos.map((p) => p.url!).filter(Boolean);
 
+    // Ensure the user's profile exists (older sessions may predate the profile trigger).
+    await supabase.from("profiles").upsert(
+      {
+        id: user.id,
+        display_name:
+          (user.user_metadata as any)?.full_name ||
+          (user.user_metadata as any)?.name ||
+          user.email?.split("@")[0] ||
+          "Utilisateur",
+      },
+      { onConflict: "id", ignoreDuplicates: true }
+    );
+
     // Premium is NEVER activated at publish time. It is only activated
     // by an admin once the payment is confirmed. Until then, the listing
     // is published as a standard ad.
