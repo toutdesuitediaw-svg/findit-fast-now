@@ -99,6 +99,8 @@ const Auth = () => {
           await supabase.auth.signOut();
           toast.error("Ce compte est suspendu. Contactez le support.");
         } else {
+          localStorage.removeItem("pending-confirmation-email");
+          setPendingEmail("");
           toast.success("Bienvenue !");
         }
       }
