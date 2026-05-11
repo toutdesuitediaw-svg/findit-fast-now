@@ -155,6 +155,31 @@ const Auth = () => {
         </div>
 
         <div className="bg-card/80 backdrop-blur-xl border border-border rounded-2xl p-8 shadow-card">
+          {pendingEmail && (
+            <div className="mb-6 rounded-xl border border-primary/30 bg-primary/10 p-4 text-sm">
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-foreground">Email envoyé avec succès</p>
+                  <p className="mt-1 text-muted-foreground break-words">
+                    Confirmez votre adresse <span className="text-foreground">{pendingEmail}</span> avant de vous connecter.
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outlineGold"
+                    size="sm"
+                    className="mt-3 w-full sm:w-auto"
+                    onClick={handleResendConfirmation}
+                    disabled={resendBusy || busy}
+                  >
+                    {resendBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                    Renvoyer l’email de confirmation
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
           <Tabs value={tab} onValueChange={(v) => setTab(v as "login" | "signup")}>
             <TabsList className="grid grid-cols-2 w-full mb-6">
               <TabsTrigger value="login">Connexion</TabsTrigger>
