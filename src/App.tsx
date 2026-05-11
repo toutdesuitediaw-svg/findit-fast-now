@@ -11,6 +11,7 @@ import RequireAuth from "./components/RequireAuth.tsx";
 import IOSInstallHint from "./components/IOSInstallHint.tsx";
 
 const Auth = lazy(() => import("./pages/Auth.tsx"));
+const AuthCallback = lazy(() => import("./pages/AuthCallback.tsx"));
 const Dashboard = lazy(() => import("./pages/Dashboard.tsx"));
 const Profile = lazy(() => import("./pages/Profile.tsx"));
 const PublishListing = lazy(() => import("./pages/PublishListing.tsx"));
@@ -43,6 +44,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/profil" element={<RequireAuth><Profile /></RequireAuth>} />
               <Route path="/publier" element={<PublishListing />} />

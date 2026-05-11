@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { z } from "zod";
-import { Mail, Lock, Loader2, Phone } from "lucide-react";
+import { CheckCircle2, Mail, Lock, Loader2, Phone, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { useAuth } from "@/hooks/useAuth";
+import { getAuthCallbackUrl, sanitizeAuthRedirect } from "@/lib/authRedirect";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,14 +21,16 @@ const whatsappSchema = z.string().trim().regex(/^\+?[0-9\s-]{8,20}$/, "Numéro W
 const Auth = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const redirectTo = searchParams.get("redirect") || "/dashboard";
+  const redirectTo = useMemo(() => sanitizeAuthRedirect(searchParams.get("redirect")), [searchParams]);
   const { user, loading: authLoading } = useAuth();
-  const [tab, setTab] = useState<"login" | "signup">("login");
+  const [tab, setTab] = useState<"login" | "signup">(() => searchParams.get("mode") === "signup" ? "signup" : "login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
+  const [pendingEmail, setPendingEmail] = useState(() => localStorage.getItem("pending-confirmation-email") ?? "");
   const [busy, setBusy] = useState(false);
+  const [resendBusy, setResendBusy] = useState(false);
 
   useEffect(() => {
     if (!authLoading && user) navigate(redirectTo, { replace: true });
@@ -51,19 +54,37 @@ const Auth = () => {
 
     setBusy(true);
     if (tab === "signup") {
+      const normalizedEmail = email.trim().toLowerCase();
       const { error } = await supabase.auth.signUp({
-        email,
+        email: normalizedEmail,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/dashboard`,
+          emailRedirectTo: getAuthCallbackUrl(redirectTo),
           data: { full_name: name, whatsapp },
         },
       });
       if (error) toast.error(error.message);
-      else toast.success("Compte créé ! Vérifiez votre email.");
+      else {
+        localStorage.setItem("pending-confirmation-email", normalizedEmail);
+        setPendingEmail(normalizedEmail);
+        setTab("login");
+        toast.success("Email envoyé avec succès", {
+          description: "Ouvrez votre boîte de réception puis cliquez sur le lien de confirmation.",
+        });
+      }
     } else {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) toast.error(error.message === "Invalid login credentials" ? "Email ou mot de passe incorrect" : error.message);
+      if (error) {
+        const message = error.message.toLowerCase();
+        if (message.includes("email not confirmed") || message.includes("confirm")) {
+          const normalizedEmail = email.trim().toLowerCase();
+          localStorage.setItem("pending-confirmation-email", normalizedEmail);
+          setPendingEmail(normalizedEmail);
+          toast.error("Votre email n’est pas encore confirmé.");
+        } else {
+          toast.error(error.message === "Invalid login credentials" ? "Email ou mot de passe incorrect" : error.message);
+        }
+      }
       else {
         // Vérifier le statut du compte
         const { data: profile } = await supabase
@@ -78,11 +99,38 @@ const Auth = () => {
           await supabase.auth.signOut();
           toast.error("Ce compte est suspendu. Contactez le support.");
         } else {
+          localStorage.removeItem("pending-confirmation-email");
+          setPendingEmail("");
           toast.success("Bienvenue !");
         }
       }
     }
     setBusy(false);
+  };
+
+  const handleResendConfirmation = async () => {
+    const targetEmail = (pendingEmail || email).trim().toLowerCase();
+    try {
+      emailSchema.parse(targetEmail);
+    } catch {
+      toast.error("Entrez l’email utilisé lors de l’inscription");
+      return;
+    }
+
+    setResendBusy(true);
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email: targetEmail,
+      options: { emailRedirectTo: getAuthCallbackUrl(redirectTo) },
+    });
+    setResendBusy(false);
+
+    if (error) return toast.error(error.message);
+    localStorage.setItem("pending-confirmation-email", targetEmail);
+    setPendingEmail(targetEmail);
+    toast.success("Email envoyé avec succès", {
+      description: "Si vous ne le voyez pas, vérifiez aussi vos courriers indésirables.",
+    });
   };
 
   const handleGoogle = async () => {
@@ -109,6 +157,31 @@ const Auth = () => {
         </div>
 
         <div className="bg-card/80 backdrop-blur-xl border border-border rounded-2xl p-8 shadow-card">
+          {pendingEmail && (
+            <div className="mb-6 rounded-xl border border-primary/30 bg-primary/10 p-4 text-sm">
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-foreground">Email envoyé avec succès</p>
+                  <p className="mt-1 text-muted-foreground break-words">
+                    Confirmez votre adresse <span className="text-foreground">{pendingEmail}</span> avant de vous connecter.
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outlineGold"
+                    size="sm"
+                    className="mt-3 w-full sm:w-auto"
+                    onClick={handleResendConfirmation}
+                    disabled={resendBusy || busy}
+                  >
+                    {resendBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                    Renvoyer l’email de confirmation
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
           <Tabs value={tab} onValueChange={(v) => setTab(v as "login" | "signup")}>
             <TabsList className="grid grid-cols-2 w-full mb-6">
               <TabsTrigger value="login">Connexion</TabsTrigger>
