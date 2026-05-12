@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
-import { Check, ImagePlus, Loader2, RotateCw, Sparkles, Star, Trash2, TriangleAlert, X, Zap } from "lucide-react";
+import { AlertCircle, Check, ImagePlus, Loader2, RotateCw, Sparkles, Star, Trash2, TriangleAlert, X, Zap } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -69,7 +70,30 @@ const PublishListing = () => {
   const [aiLang, setAiLang] = useState<"fr" | "en">("fr");
   const [aiProgress, setAiProgress] = useState(0);
   const [aiPhase, setAiPhase] = useState<string>("");
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiRejected, setAiRejected] = useState<{ url: string; reason: string }[]>([]);
+  const [aiPreview, setAiPreview] = useState<{ title?: string; description: string } | null>(null);
+  const aiAbortRef = useRef<AbortController | null>(null);
+  const aiIntervalRef = useRef<number | null>(null);
+  const draftLoadedRef = useRef(false);
   const [confirmPremiumOpen, setConfirmPremiumOpen] = useState(false);
+
+  const stopAiTimers = () => {
+    if (aiIntervalRef.current !== null) {
+      window.clearInterval(aiIntervalRef.current);
+      aiIntervalRef.current = null;
+    }
+  };
+
+  const cancelAiGeneration = () => {
+    aiAbortRef.current?.abort();
+    aiAbortRef.current = null;
+    stopAiTimers();
+    setAiBusy(false);
+    setAiProgress(0);
+    setAiPhase("");
+    toast.info(aiLang === "en" ? "AI generation cancelled" : "Génération IA annulée");
+  };
 
   const generateWithAI = async () => {
     const urls = photos.filter((p) => p.status === "done" && p.url).map((p) => p.url!);
@@ -95,12 +119,13 @@ const PublishListing = () => {
           { at: 90, label: "Finalisation…" },
         ];
 
+    setAiError(null);
+    setAiRejected([]);
     setAiBusy(true);
     setAiProgress(2);
     setAiPhase(phases[0].label);
 
-    // Simulated smooth progress that caps at 92% until the request resolves
-    const interval = window.setInterval(() => {
+    aiIntervalRef.current = window.setInterval(() => {
       setAiProgress((p) => {
         if (p >= 92) return p;
         const inc = p < 30 ? 3 : p < 60 ? 2 : p < 85 ? 1 : 0.5;
@@ -111,31 +136,69 @@ const PublishListing = () => {
       });
     }, 250);
 
+    const controller = new AbortController();
+    aiAbortRef.current = controller;
+
     try {
-      const { data, error } = await supabase.functions.invoke("generate-listing-description", {
-        body: { imageUrls: urls.slice(0, 6), categoryName, title: form.title || undefined, language: aiLang },
+      const session = (await supabase.auth.getSession()).data.session;
+      const supabaseUrl = (import.meta.env as any).VITE_SUPABASE_URL as string;
+      const resp = await fetch(`${supabaseUrl}/functions/v1/generate-listing-description`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token ?? ""}`,
+          apikey: (import.meta.env as any).VITE_SUPABASE_PUBLISHABLE_KEY as string,
+        },
+        body: JSON.stringify({
+          imageUrls: urls.slice(0, 6),
+          categoryName,
+          title: form.title || undefined,
+          language: aiLang,
+        }),
+        signal: controller.signal,
       });
-      if (error) throw error;
-      if ((data as any)?.error) throw new Error((data as any).error);
+      const data = await resp.json().catch(() => ({}));
+      if (Array.isArray(data?.rejected)) setAiRejected(data.rejected);
+      if (!resp.ok || data?.error) {
+        const msg =
+          data?.error ||
+          (resp.status === 429
+            ? isEn ? "Too many requests. Try again." : "Trop de requêtes. Réessayez."
+            : resp.status === 402
+              ? isEn ? "AI credits exhausted." : "Crédits IA épuisés."
+              : isEn ? `Generation failed (${resp.status}).` : `Échec de la génération (${resp.status}).`);
+        throw new Error(msg);
+      }
       const { title, description } = data as { title?: string; description?: string };
-      setForm((f) => ({
-        ...f,
-        title: !f.title && title ? title : f.title,
-        description: description || f.description,
-      }));
+      if (!description) throw new Error(isEn ? "Empty AI response." : "Réponse IA vide.");
       setAiProgress(100);
       setAiPhase(isEn ? "Done ✨" : "Terminé ✨");
-      toast.success(isEn ? "Description generated ✨" : "Description générée ✨");
+      setAiPreview({ title, description });
     } catch (e: any) {
-      toast.error(e?.message || "Échec de la génération IA");
+      if (e?.name === "AbortError") return;
+      const msg = e?.message || (isEn ? "AI generation failed" : "Échec de la génération IA");
+      setAiError(msg);
+      toast.error(msg);
     } finally {
-      window.clearInterval(interval);
+      stopAiTimers();
       window.setTimeout(() => {
         setAiBusy(false);
         setAiProgress(0);
         setAiPhase("");
-      }, 600);
+        aiAbortRef.current = null;
+      }, 400);
     }
+  };
+
+  const acceptAiPreview = () => {
+    if (!aiPreview) return;
+    setForm((f) => ({
+      ...f,
+      title: !f.title && aiPreview.title ? aiPreview.title : f.title,
+      description: aiPreview.description,
+    }));
+    setAiPreview(null);
+    toast.success(aiLang === "en" ? "Description applied" : "Description appliquée");
   };
 
 
@@ -163,6 +226,42 @@ const PublishListing = () => {
       setCategories(data ?? []);
     });
   }, []);
+
+  // Restore draft (description + category + title/price/location) on mount
+  const draftKey = user ? `publish-draft:${user.id}` : null;
+  useEffect(() => {
+    if (!draftKey || draftLoadedRef.current) return;
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (raw) {
+        const saved = JSON.parse(raw);
+        setForm((f) => ({ ...f, ...saved }));
+        toast.info("Brouillon restauré");
+      }
+    } catch {}
+    draftLoadedRef.current = true;
+  }, [draftKey]);
+
+  // Auto-save draft on form changes
+  useEffect(() => {
+    if (!draftKey || !draftLoadedRef.current) return;
+    const t = window.setTimeout(() => {
+      try {
+        localStorage.setItem(
+          draftKey,
+          JSON.stringify({
+            title: form.title,
+            description: form.description,
+            price: form.price,
+            location: form.location,
+            category_id: form.category_id,
+          }),
+        );
+      } catch {}
+    }, 400);
+    return () => window.clearTimeout(t);
+  }, [draftKey, form.title, form.description, form.price, form.location, form.category_id]);
+
 
   const uploadPhoto = async (id: string, file: File) => {
     if (!user) return;
@@ -331,6 +430,7 @@ const PublishListing = () => {
       toast.success("Annonce publiée !");
     }
 
+    if (draftKey) { try { localStorage.removeItem(draftKey); } catch {} }
     navigate(`/annonce/${inserted.id}`);
   };
 
@@ -408,7 +508,19 @@ const PublishListing = () => {
                     <Sparkles className="w-3.5 h-3.5 animate-pulse" />
                     <span>{aiPhase || (aiLang === "en" ? "Analyzing…" : "Analyse en cours…")}</span>
                   </div>
-                  <span className="tabular-nums text-muted-foreground">{Math.round(aiProgress)}%</span>
+                  <div className="flex items-center gap-2">
+                    <span className="tabular-nums text-muted-foreground">{Math.round(aiProgress)}%</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-xs"
+                      onClick={cancelAiGeneration}
+                    >
+                      <X className="w-3.5 h-3.5 mr-1" />
+                      {aiLang === "en" ? "Cancel" : "Annuler"}
+                    </Button>
+                  </div>
                 </div>
                 <Progress value={aiProgress} className="h-1.5" />
                 <p className="text-[11px] text-muted-foreground">
@@ -418,10 +530,58 @@ const PublishListing = () => {
                 </p>
               </div>
             )}
+            {!aiBusy && aiError && (
+              <div
+                role="alert"
+                className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 space-y-2"
+              >
+                <div className="flex items-start gap-2 text-sm text-destructive">
+                  <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                  <div className="flex-1">
+                    <p className="font-medium">{aiLang === "en" ? "AI generation failed" : "Échec de la génération IA"}</p>
+                    <p className="text-xs opacity-90 mt-0.5">{aiError}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button type="button" variant="gold" size="sm" className="h-7" onClick={generateWithAI}>
+                    <RotateCw className="w-3.5 h-3.5 mr-1" />
+                    {aiLang === "en" ? "Retry" : "Réessayer"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => setAiError(null)}
+                  >
+                    {aiLang === "en" ? "Dismiss" : "Ignorer"}
+                  </Button>
+                </div>
+              </div>
+            )}
+            {!aiBusy && aiRejected.length > 0 && (
+              <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 space-y-2">
+                <p className="text-xs font-medium text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                  <TriangleAlert className="w-3.5 h-3.5" />
+                  {aiLang === "en"
+                    ? `${aiRejected.length} photo(s) could not be analyzed`
+                    : `${aiRejected.length} photo(s) n'ont pas pu être analysées`}
+                </p>
+                <ul className="flex flex-wrap gap-2">
+                  {aiRejected.map((r, i) => (
+                    <li key={i} className="flex items-center gap-2 bg-background border border-border rounded-md p-1.5 text-xs">
+                      <img src={r.url} alt="" className="w-8 h-8 rounded object-cover" />
+                      <span className="text-muted-foreground max-w-[140px] truncate" title={r.reason}>{r.reason}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             {doneCount === 0 && (
               <p className="text-xs text-muted-foreground">Astuce : ajoutez au moins une photo pour activer la génération IA.</p>
             )}
           </div>
+
 
 
           <div className="grid sm:grid-cols-2 gap-4">
@@ -676,6 +836,72 @@ const PublishListing = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        <Dialog open={!!aiPreview} onOpenChange={(o) => { if (!o) setAiPreview(null); }}>
+          <DialogContent className="max-w-3xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-primary" />
+                {aiLang === "en" ? "Preview AI description" : "Aperçu de la description IA"}
+              </DialogTitle>
+              <DialogDescription>
+                {aiLang === "en"
+                  ? "Compare your current text with the AI-generated version before replacing."
+                  : "Comparez votre texte actuel avec la version générée par l'IA avant de remplacer."}
+              </DialogDescription>
+            </DialogHeader>
+            {aiPreview && (
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    {aiLang === "en" ? "Current" : "Actuel"}
+                  </div>
+                  <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm whitespace-pre-wrap min-h-[160px] max-h-[40vh] overflow-auto">
+                    {form.description?.trim() || (
+                      <span className="italic text-muted-foreground">
+                        {aiLang === "en" ? "(empty)" : "(vide)"}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <div className="text-xs font-medium text-primary uppercase tracking-wide flex items-center gap-1">
+                    <Sparkles className="w-3 h-3" />
+                    {aiLang === "en" ? "AI proposal" : "Proposition IA"}
+                  </div>
+                  {aiPreview.title && !form.title && (
+                    <div className="text-xs text-muted-foreground">
+                      <span className="font-medium text-foreground">
+                        {aiLang === "en" ? "Suggested title: " : "Titre suggéré : "}
+                      </span>
+                      {aiPreview.title}
+                    </div>
+                  )}
+                  <div className="rounded-lg border border-primary/40 bg-primary/5 p-3 text-sm whitespace-pre-wrap min-h-[160px] max-h-[40vh] overflow-auto">
+                    {aiPreview.description}
+                  </div>
+                </div>
+              </div>
+            )}
+            <DialogFooter className="gap-2 sm:gap-2">
+              <Button variant="ghost" onClick={() => setAiPreview(null)}>
+                {aiLang === "en" ? "Keep current" : "Garder l'actuel"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => { setAiPreview(null); void generateWithAI(); }}
+              >
+                <RotateCw className="w-4 h-4 mr-1.5" />
+                {aiLang === "en" ? "Regenerate" : "Régénérer"}
+              </Button>
+              <Button variant="gold" onClick={acceptAiPreview}>
+                <Check className="w-4 h-4 mr-1.5" />
+                {aiLang === "en" ? "Use this description" : "Utiliser cette description"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
 
       </main>
       <Footer />
