@@ -66,6 +66,8 @@ const PublishListing = () => {
   const [busy, setBusy] = useState(false);
   const [aiBusy, setAiBusy] = useState(false);
   const [aiLang, setAiLang] = useState<"fr" | "en">("fr");
+  const [aiProgress, setAiProgress] = useState(0);
+  const [aiPhase, setAiPhase] = useState<string>("");
   const [confirmPremiumOpen, setConfirmPremiumOpen] = useState(false);
 
   const generateWithAI = async () => {
@@ -75,7 +77,39 @@ const PublishListing = () => {
       return;
     }
     const categoryName = categories.find((c) => c.id === form.category_id)?.name;
+    const isEn = aiLang === "en";
+    const phases = isEn
+      ? [
+          { at: 0, label: "Preparing photos…" },
+          { at: 15, label: "Analyzing images…" },
+          { at: 45, label: "Detecting product details…" },
+          { at: 70, label: "Writing description…" },
+          { at: 90, label: "Finalizing…" },
+        ]
+      : [
+          { at: 0, label: "Préparation des photos…" },
+          { at: 15, label: "Analyse des images…" },
+          { at: 45, label: "Détection des détails produit…" },
+          { at: 70, label: "Rédaction de la description…" },
+          { at: 90, label: "Finalisation…" },
+        ];
+
     setAiBusy(true);
+    setAiProgress(2);
+    setAiPhase(phases[0].label);
+
+    // Simulated smooth progress that caps at 92% until the request resolves
+    const interval = window.setInterval(() => {
+      setAiProgress((p) => {
+        if (p >= 92) return p;
+        const inc = p < 30 ? 3 : p < 60 ? 2 : p < 85 ? 1 : 0.5;
+        const next = Math.min(92, p + inc);
+        const phase = [...phases].reverse().find((ph) => next >= ph.at);
+        if (phase) setAiPhase(phase.label);
+        return next;
+      });
+    }, 250);
+
     try {
       const { data, error } = await supabase.functions.invoke("generate-listing-description", {
         body: { imageUrls: urls.slice(0, 6), categoryName, title: form.title || undefined, language: aiLang },
@@ -88,11 +122,18 @@ const PublishListing = () => {
         title: !f.title && title ? title : f.title,
         description: description || f.description,
       }));
-      toast.success(aiLang === "en" ? "Description generated ✨" : "Description générée ✨");
+      setAiProgress(100);
+      setAiPhase(isEn ? "Done ✨" : "Terminé ✨");
+      toast.success(isEn ? "Description generated ✨" : "Description générée ✨");
     } catch (e: any) {
       toast.error(e?.message || "Échec de la génération IA");
     } finally {
-      setAiBusy(false);
+      window.clearInterval(interval);
+      window.setTimeout(() => {
+        setAiBusy(false);
+        setAiProgress(0);
+        setAiPhase("");
+      }, 600);
     }
   };
 
