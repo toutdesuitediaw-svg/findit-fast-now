@@ -508,7 +508,19 @@ const PublishListing = () => {
                     <Sparkles className="w-3.5 h-3.5 animate-pulse" />
                     <span>{aiPhase || (aiLang === "en" ? "Analyzing…" : "Analyse en cours…")}</span>
                   </div>
-                  <span className="tabular-nums text-muted-foreground">{Math.round(aiProgress)}%</span>
+                  <div className="flex items-center gap-2">
+                    <span className="tabular-nums text-muted-foreground">{Math.round(aiProgress)}%</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-xs"
+                      onClick={cancelAiGeneration}
+                    >
+                      <X className="w-3.5 h-3.5 mr-1" />
+                      {aiLang === "en" ? "Cancel" : "Annuler"}
+                    </Button>
+                  </div>
                 </div>
                 <Progress value={aiProgress} className="h-1.5" />
                 <p className="text-[11px] text-muted-foreground">
@@ -518,10 +530,58 @@ const PublishListing = () => {
                 </p>
               </div>
             )}
+            {!aiBusy && aiError && (
+              <div
+                role="alert"
+                className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 space-y-2"
+              >
+                <div className="flex items-start gap-2 text-sm text-destructive">
+                  <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                  <div className="flex-1">
+                    <p className="font-medium">{aiLang === "en" ? "AI generation failed" : "Échec de la génération IA"}</p>
+                    <p className="text-xs opacity-90 mt-0.5">{aiError}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button type="button" variant="gold" size="sm" className="h-7" onClick={generateWithAI}>
+                    <RotateCw className="w-3.5 h-3.5 mr-1" />
+                    {aiLang === "en" ? "Retry" : "Réessayer"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => setAiError(null)}
+                  >
+                    {aiLang === "en" ? "Dismiss" : "Ignorer"}
+                  </Button>
+                </div>
+              </div>
+            )}
+            {!aiBusy && aiRejected.length > 0 && (
+              <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 space-y-2">
+                <p className="text-xs font-medium text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                  <TriangleAlert className="w-3.5 h-3.5" />
+                  {aiLang === "en"
+                    ? `${aiRejected.length} photo(s) could not be analyzed`
+                    : `${aiRejected.length} photo(s) n'ont pas pu être analysées`}
+                </p>
+                <ul className="flex flex-wrap gap-2">
+                  {aiRejected.map((r, i) => (
+                    <li key={i} className="flex items-center gap-2 bg-background border border-border rounded-md p-1.5 text-xs">
+                      <img src={r.url} alt="" className="w-8 h-8 rounded object-cover" />
+                      <span className="text-muted-foreground max-w-[140px] truncate" title={r.reason}>{r.reason}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             {doneCount === 0 && (
               <p className="text-xs text-muted-foreground">Astuce : ajoutez au moins une photo pour activer la génération IA.</p>
             )}
           </div>
+
 
 
           <div className="grid sm:grid-cols-2 gap-4">
