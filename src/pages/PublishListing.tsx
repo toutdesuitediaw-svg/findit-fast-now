@@ -227,6 +227,42 @@ const PublishListing = () => {
     });
   }, []);
 
+  // Restore draft (description + category + title/price/location) on mount
+  const draftKey = user ? `publish-draft:${user.id}` : null;
+  useEffect(() => {
+    if (!draftKey || draftLoadedRef.current) return;
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (raw) {
+        const saved = JSON.parse(raw);
+        setForm((f) => ({ ...f, ...saved }));
+        toast.info("Brouillon restauré");
+      }
+    } catch {}
+    draftLoadedRef.current = true;
+  }, [draftKey]);
+
+  // Auto-save draft on form changes
+  useEffect(() => {
+    if (!draftKey || !draftLoadedRef.current) return;
+    const t = window.setTimeout(() => {
+      try {
+        localStorage.setItem(
+          draftKey,
+          JSON.stringify({
+            title: form.title,
+            description: form.description,
+            price: form.price,
+            location: form.location,
+            category_id: form.category_id,
+          }),
+        );
+      } catch {}
+    }, 400);
+    return () => window.clearTimeout(t);
+  }, [draftKey, form.title, form.description, form.price, form.location, form.category_id]);
+
+
   const uploadPhoto = async (id: string, file: File) => {
     if (!user) return;
     cancelledRef.current.delete(id);
