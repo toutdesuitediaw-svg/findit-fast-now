@@ -8,6 +8,28 @@ interface Body {
   language?: "fr" | "en";
 }
 
+const MAX_BYTES = 10 * 1024 * 1024; // 10MB
+
+async function inspectImage(url: string, lang: "fr" | "en"): Promise<{ ok: true } | { ok: false; reason: string }> {
+  try {
+    const r = await fetch(url, { method: "HEAD" });
+    if (!r.ok) {
+      return { ok: false, reason: lang === "en" ? `Unreachable (HTTP ${r.status})` : `Inaccessible (HTTP ${r.status})` };
+    }
+    const ct = r.headers.get("content-type") || "";
+    if (!ct.startsWith("image/")) {
+      return { ok: false, reason: lang === "en" ? "Not an image" : "Pas une image" };
+    }
+    const len = parseInt(r.headers.get("content-length") || "0", 10);
+    if (len && len > MAX_BYTES) {
+      return { ok: false, reason: lang === "en" ? "Too large (>10MB)" : "Trop lourde (>10Mo)" };
+    }
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, reason: lang === "en" ? "Fetch failed" : "Échec de chargement" };
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -21,6 +43,29 @@ Deno.serve(async (req) => {
       });
     }
     if (imageUrls.length > 8) imageUrls.length = 8;
+
+    // Validate each image — keep only the ones we can actually analyze
+    const inspections = await Promise.all(imageUrls.map((u) => inspectImage(u, language)));
+    const accepted: string[] = [];
+    const rejected: { url: string; reason: string }[] = [];
+    imageUrls.forEach((u, i) => {
+      const r = inspections[i];
+      if (r.ok) accepted.push(u);
+      else rejected.push({ url: u, reason: r.reason });
+    });
+
+    if (accepted.length === 0) {
+      return new Response(
+        JSON.stringify({
+          error:
+            language === "en"
+              ? "No photo could be analyzed. Check your uploads and try again."
+              : "Aucune photo n'a pu être analysée. Vérifiez vos uploads et réessayez.",
+          rejected,
+        }),
+        { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY manquant");
@@ -37,7 +82,7 @@ Deno.serve(async (req) => {
         : "\nDétecte : type d'objet, marque, couleur, état, caractéristiques visibles. Renvoie un titre accrocheur (<= 80 car.) et une description de 3-5 phrases.");
 
     const content: any[] = [{ type: "text", text: userText }];
-    for (const url of imageUrls) content.push({ type: "image_url", image_url: { url } });
+    for (const url of accepted) content.push({ type: "image_url", image_url: { url } });
 
     const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -81,38 +126,49 @@ Deno.serve(async (req) => {
     });
 
     if (resp.status === 429) {
-      return new Response(JSON.stringify({ error: "Trop de requêtes. Réessayez dans un instant." }), {
-        status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(JSON.stringify({
+        error: language === "en"
+          ? "Too many requests. Please wait a moment and try again."
+          : "Trop de requêtes. Patientez un instant puis réessayez.",
+        rejected,
+      }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
     if (resp.status === 402) {
-      return new Response(JSON.stringify({ error: "Crédits IA épuisés. Ajoutez des crédits dans Lovable AI." }), {
-        status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(JSON.stringify({
+        error: language === "en"
+          ? "AI credits exhausted. Add credits in Lovable AI."
+          : "Crédits IA épuisés. Ajoutez des crédits dans Lovable AI.",
+        rejected,
+      }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
     if (!resp.ok) {
       const t = await resp.text();
       console.error("AI error", resp.status, t);
-      return new Response(JSON.stringify({ error: "Erreur IA" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(JSON.stringify({
+        error: language === "en"
+          ? `AI error (${resp.status}). Please try again.`
+          : `Erreur IA (${resp.status}). Veuillez réessayer.`,
+        rejected,
+      }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const data = await resp.json();
     const call = data.choices?.[0]?.message?.tool_calls?.[0];
     const args = call ? JSON.parse(call.function.arguments) : null;
     if (!args) {
-      return new Response(JSON.stringify({ error: "Réponse IA invalide" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(JSON.stringify({
+        error: language === "en" ? "Invalid AI response. Please retry." : "Réponse IA invalide. Réessayez.",
+        rejected,
+      }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
     if (args.refuse) {
-      return new Response(JSON.stringify({ error: args.refuse_reason || "Contenu non autorisé." }), {
-        status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(JSON.stringify({
+        error: args.refuse_reason || (language === "en" ? "Content not allowed." : "Contenu non autorisé."),
+        rejected,
+      }), { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    return new Response(JSON.stringify(args), {
+    return new Response(JSON.stringify({ ...args, rejected, analyzed: accepted.length }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
