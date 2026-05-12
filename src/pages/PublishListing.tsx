@@ -430,6 +430,7 @@ const PublishListing = () => {
       toast.success("Annonce publiée !");
     }
 
+    if (draftKey) { try { localStorage.removeItem(draftKey); } catch {} }
     navigate(`/annonce/${inserted.id}`);
   };
 
