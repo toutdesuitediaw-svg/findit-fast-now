@@ -70,7 +70,30 @@ const PublishListing = () => {
   const [aiLang, setAiLang] = useState<"fr" | "en">("fr");
   const [aiProgress, setAiProgress] = useState(0);
   const [aiPhase, setAiPhase] = useState<string>("");
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiRejected, setAiRejected] = useState<{ url: string; reason: string }[]>([]);
+  const [aiPreview, setAiPreview] = useState<{ title?: string; description: string } | null>(null);
+  const aiAbortRef = useRef<AbortController | null>(null);
+  const aiIntervalRef = useRef<number | null>(null);
+  const draftLoadedRef = useRef(false);
   const [confirmPremiumOpen, setConfirmPremiumOpen] = useState(false);
+
+  const stopAiTimers = () => {
+    if (aiIntervalRef.current !== null) {
+      window.clearInterval(aiIntervalRef.current);
+      aiIntervalRef.current = null;
+    }
+  };
+
+  const cancelAiGeneration = () => {
+    aiAbortRef.current?.abort();
+    aiAbortRef.current = null;
+    stopAiTimers();
+    setAiBusy(false);
+    setAiProgress(0);
+    setAiPhase("");
+    toast.info(aiLang === "en" ? "AI generation cancelled" : "Génération IA annulée");
+  };
 
   const generateWithAI = async () => {
     const urls = photos.filter((p) => p.status === "done" && p.url).map((p) => p.url!);
@@ -96,12 +119,13 @@ const PublishListing = () => {
           { at: 90, label: "Finalisation…" },
         ];
 
+    setAiError(null);
+    setAiRejected([]);
     setAiBusy(true);
     setAiProgress(2);
     setAiPhase(phases[0].label);
 
-    // Simulated smooth progress that caps at 92% until the request resolves
-    const interval = window.setInterval(() => {
+    aiIntervalRef.current = window.setInterval(() => {
       setAiProgress((p) => {
         if (p >= 92) return p;
         const inc = p < 30 ? 3 : p < 60 ? 2 : p < 85 ? 1 : 0.5;
@@ -112,31 +136,69 @@ const PublishListing = () => {
       });
     }, 250);
 
+    const controller = new AbortController();
+    aiAbortRef.current = controller;
+
     try {
-      const { data, error } = await supabase.functions.invoke("generate-listing-description", {
-        body: { imageUrls: urls.slice(0, 6), categoryName, title: form.title || undefined, language: aiLang },
+      const session = (await supabase.auth.getSession()).data.session;
+      const supabaseUrl = (import.meta.env as any).VITE_SUPABASE_URL as string;
+      const resp = await fetch(`${supabaseUrl}/functions/v1/generate-listing-description`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token ?? ""}`,
+          apikey: (import.meta.env as any).VITE_SUPABASE_PUBLISHABLE_KEY as string,
+        },
+        body: JSON.stringify({
+          imageUrls: urls.slice(0, 6),
+          categoryName,
+          title: form.title || undefined,
+          language: aiLang,
+        }),
+        signal: controller.signal,
       });
-      if (error) throw error;
-      if ((data as any)?.error) throw new Error((data as any).error);
+      const data = await resp.json().catch(() => ({}));
+      if (Array.isArray(data?.rejected)) setAiRejected(data.rejected);
+      if (!resp.ok || data?.error) {
+        const msg =
+          data?.error ||
+          (resp.status === 429
+            ? isEn ? "Too many requests. Try again." : "Trop de requêtes. Réessayez."
+            : resp.status === 402
+              ? isEn ? "AI credits exhausted." : "Crédits IA épuisés."
+              : isEn ? `Generation failed (${resp.status}).` : `Échec de la génération (${resp.status}).`);
+        throw new Error(msg);
+      }
       const { title, description } = data as { title?: string; description?: string };
-      setForm((f) => ({
-        ...f,
-        title: !f.title && title ? title : f.title,
-        description: description || f.description,
-      }));
+      if (!description) throw new Error(isEn ? "Empty AI response." : "Réponse IA vide.");
       setAiProgress(100);
       setAiPhase(isEn ? "Done ✨" : "Terminé ✨");
-      toast.success(isEn ? "Description generated ✨" : "Description générée ✨");
+      setAiPreview({ title, description });
     } catch (e: any) {
-      toast.error(e?.message || "Échec de la génération IA");
+      if (e?.name === "AbortError") return;
+      const msg = e?.message || (isEn ? "AI generation failed" : "Échec de la génération IA");
+      setAiError(msg);
+      toast.error(msg);
     } finally {
-      window.clearInterval(interval);
+      stopAiTimers();
       window.setTimeout(() => {
         setAiBusy(false);
         setAiProgress(0);
         setAiPhase("");
-      }, 600);
+        aiAbortRef.current = null;
+      }, 400);
     }
+  };
+
+  const acceptAiPreview = () => {
+    if (!aiPreview) return;
+    setForm((f) => ({
+      ...f,
+      title: !f.title && aiPreview.title ? aiPreview.title : f.title,
+      description: aiPreview.description,
+    }));
+    setAiPreview(null);
+    toast.success(aiLang === "en" ? "Description applied" : "Description appliquée");
   };
 
 
