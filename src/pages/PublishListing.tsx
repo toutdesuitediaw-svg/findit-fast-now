@@ -397,6 +397,27 @@ const PublishListing = () => {
               </div>
             </div>
             <Textarea id="description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Ajoutez vos photos puis cliquez « Générer avec IA » ✨ — ou décrivez vous-même l'état, l'âge, les caractéristiques..." rows={6} maxLength={2000} required />
+            {aiBusy && (
+              <div
+                role="status"
+                aria-live="polite"
+                className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2 animate-in fade-in slide-in-from-top-1"
+              >
+                <div className="flex items-center justify-between gap-2 text-xs">
+                  <div className="flex items-center gap-2 text-primary font-medium">
+                    <Sparkles className="w-3.5 h-3.5 animate-pulse" />
+                    <span>{aiPhase || (aiLang === "en" ? "Analyzing…" : "Analyse en cours…")}</span>
+                  </div>
+                  <span className="tabular-nums text-muted-foreground">{Math.round(aiProgress)}%</span>
+                </div>
+                <Progress value={aiProgress} className="h-1.5" />
+                <p className="text-[11px] text-muted-foreground">
+                  {aiLang === "en"
+                    ? "The AI is reading your photos to write a professional description."
+                    : "L'IA analyse vos photos pour rédiger une description professionnelle."}
+                </p>
+              </div>
+            )}
             {doneCount === 0 && (
               <p className="text-xs text-muted-foreground">Astuce : ajoutez au moins une photo pour activer la génération IA.</p>
             )}
