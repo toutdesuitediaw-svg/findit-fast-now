@@ -837,6 +837,72 @@ const PublishListing = () => {
           </AlertDialogContent>
         </AlertDialog>
 
+        <Dialog open={!!aiPreview} onOpenChange={(o) => { if (!o) setAiPreview(null); }}>
+          <DialogContent className="max-w-3xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-primary" />
+                {aiLang === "en" ? "Preview AI description" : "Aperçu de la description IA"}
+              </DialogTitle>
+              <DialogDescription>
+                {aiLang === "en"
+                  ? "Compare your current text with the AI-generated version before replacing."
+                  : "Comparez votre texte actuel avec la version générée par l'IA avant de remplacer."}
+              </DialogDescription>
+            </DialogHeader>
+            {aiPreview && (
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    {aiLang === "en" ? "Current" : "Actuel"}
+                  </div>
+                  <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm whitespace-pre-wrap min-h-[160px] max-h-[40vh] overflow-auto">
+                    {form.description?.trim() || (
+                      <span className="italic text-muted-foreground">
+                        {aiLang === "en" ? "(empty)" : "(vide)"}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <div className="text-xs font-medium text-primary uppercase tracking-wide flex items-center gap-1">
+                    <Sparkles className="w-3 h-3" />
+                    {aiLang === "en" ? "AI proposal" : "Proposition IA"}
+                  </div>
+                  {aiPreview.title && !form.title && (
+                    <div className="text-xs text-muted-foreground">
+                      <span className="font-medium text-foreground">
+                        {aiLang === "en" ? "Suggested title: " : "Titre suggéré : "}
+                      </span>
+                      {aiPreview.title}
+                    </div>
+                  )}
+                  <div className="rounded-lg border border-primary/40 bg-primary/5 p-3 text-sm whitespace-pre-wrap min-h-[160px] max-h-[40vh] overflow-auto">
+                    {aiPreview.description}
+                  </div>
+                </div>
+              </div>
+            )}
+            <DialogFooter className="gap-2 sm:gap-2">
+              <Button variant="ghost" onClick={() => setAiPreview(null)}>
+                {aiLang === "en" ? "Keep current" : "Garder l'actuel"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => { setAiPreview(null); void generateWithAI(); }}
+              >
+                <RotateCw className="w-4 h-4 mr-1.5" />
+                {aiLang === "en" ? "Regenerate" : "Régénérer"}
+              </Button>
+              <Button variant="gold" onClick={acceptAiPreview}>
+                <Check className="w-4 h-4 mr-1.5" />
+                {aiLang === "en" ? "Use this description" : "Utiliser cette description"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+
       </main>
       <Footer />
     </div>
