@@ -64,7 +64,38 @@ const PublishListing = () => {
     is_premium: false,
   });
   const [busy, setBusy] = useState(false);
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiLang, setAiLang] = useState<"fr" | "en">("fr");
   const [confirmPremiumOpen, setConfirmPremiumOpen] = useState(false);
+
+  const generateWithAI = async () => {
+    const urls = photos.filter((p) => p.status === "done" && p.url).map((p) => p.url!);
+    if (urls.length === 0) {
+      toast.error("Ajoutez au moins une photo (uploadée) pour utiliser l'IA.");
+      return;
+    }
+    const categoryName = categories.find((c) => c.id === form.category_id)?.name;
+    setAiBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-listing-description", {
+        body: { imageUrls: urls.slice(0, 6), categoryName, title: form.title || undefined, language: aiLang },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      const { title, description } = data as { title?: string; description?: string };
+      setForm((f) => ({
+        ...f,
+        title: !f.title && title ? title : f.title,
+        description: description || f.description,
+      }));
+      toast.success(aiLang === "en" ? "Description generated ✨" : "Description générée ✨");
+    } catch (e: any) {
+      toast.error(e?.message || "Échec de la génération IA");
+    } finally {
+      setAiBusy(false);
+    }
+  };
+
 
   const doneCount = photos.filter((p) => p.status === "done").length;
   const errorCount = photos.filter((p) => p.status === "error").length;
@@ -298,9 +329,37 @@ const PublishListing = () => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Description *</Label>
-            <Textarea id="description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Décrivez l'état, l'âge, les caractéristiques..." rows={6} maxLength={2000} required />
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <Label htmlFor="description">Description *</Label>
+              <div className="flex items-center gap-2">
+                <select
+                  value={aiLang}
+                  onChange={(e) => setAiLang(e.target.value as "fr" | "en")}
+                  className="text-xs bg-background border border-border rounded-md px-2 py-1"
+                  aria-label="Langue IA"
+                >
+                  <option value="fr">FR</option>
+                  <option value="en">EN</option>
+                </select>
+                <Button
+                  type="button"
+                  variant="gold"
+                  size="sm"
+                  onClick={generateWithAI}
+                  disabled={aiBusy || doneCount === 0}
+                  className="h-8"
+                >
+                  {aiBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                  {form.description ? "Régénérer avec IA" : "Générer avec IA"}
+                </Button>
+              </div>
+            </div>
+            <Textarea id="description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Ajoutez vos photos puis cliquez « Générer avec IA » ✨ — ou décrivez vous-même l'état, l'âge, les caractéristiques..." rows={6} maxLength={2000} required />
+            {doneCount === 0 && (
+              <p className="text-xs text-muted-foreground">Astuce : ajoutez au moins une photo pour activer la génération IA.</p>
+            )}
           </div>
+
 
           <div className="grid sm:grid-cols-2 gap-4">
             <div className="space-y-2">
