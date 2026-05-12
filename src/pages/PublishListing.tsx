@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   AlertDialog,
@@ -66,6 +67,8 @@ const PublishListing = () => {
   const [busy, setBusy] = useState(false);
   const [aiBusy, setAiBusy] = useState(false);
   const [aiLang, setAiLang] = useState<"fr" | "en">("fr");
+  const [aiProgress, setAiProgress] = useState(0);
+  const [aiPhase, setAiPhase] = useState<string>("");
   const [confirmPremiumOpen, setConfirmPremiumOpen] = useState(false);
 
   const generateWithAI = async () => {
@@ -75,7 +78,39 @@ const PublishListing = () => {
       return;
     }
     const categoryName = categories.find((c) => c.id === form.category_id)?.name;
+    const isEn = aiLang === "en";
+    const phases = isEn
+      ? [
+          { at: 0, label: "Preparing photos…" },
+          { at: 15, label: "Analyzing images…" },
+          { at: 45, label: "Detecting product details…" },
+          { at: 70, label: "Writing description…" },
+          { at: 90, label: "Finalizing…" },
+        ]
+      : [
+          { at: 0, label: "Préparation des photos…" },
+          { at: 15, label: "Analyse des images…" },
+          { at: 45, label: "Détection des détails produit…" },
+          { at: 70, label: "Rédaction de la description…" },
+          { at: 90, label: "Finalisation…" },
+        ];
+
     setAiBusy(true);
+    setAiProgress(2);
+    setAiPhase(phases[0].label);
+
+    // Simulated smooth progress that caps at 92% until the request resolves
+    const interval = window.setInterval(() => {
+      setAiProgress((p) => {
+        if (p >= 92) return p;
+        const inc = p < 30 ? 3 : p < 60 ? 2 : p < 85 ? 1 : 0.5;
+        const next = Math.min(92, p + inc);
+        const phase = [...phases].reverse().find((ph) => next >= ph.at);
+        if (phase) setAiPhase(phase.label);
+        return next;
+      });
+    }, 250);
+
     try {
       const { data, error } = await supabase.functions.invoke("generate-listing-description", {
         body: { imageUrls: urls.slice(0, 6), categoryName, title: form.title || undefined, language: aiLang },
@@ -88,11 +123,18 @@ const PublishListing = () => {
         title: !f.title && title ? title : f.title,
         description: description || f.description,
       }));
-      toast.success(aiLang === "en" ? "Description generated ✨" : "Description générée ✨");
+      setAiProgress(100);
+      setAiPhase(isEn ? "Done ✨" : "Terminé ✨");
+      toast.success(isEn ? "Description generated ✨" : "Description générée ✨");
     } catch (e: any) {
       toast.error(e?.message || "Échec de la génération IA");
     } finally {
-      setAiBusy(false);
+      window.clearInterval(interval);
+      window.setTimeout(() => {
+        setAiBusy(false);
+        setAiProgress(0);
+        setAiPhase("");
+      }, 600);
     }
   };
 
@@ -355,6 +397,27 @@ const PublishListing = () => {
               </div>
             </div>
             <Textarea id="description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Ajoutez vos photos puis cliquez « Générer avec IA » ✨ — ou décrivez vous-même l'état, l'âge, les caractéristiques..." rows={6} maxLength={2000} required />
+            {aiBusy && (
+              <div
+                role="status"
+                aria-live="polite"
+                className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2 animate-in fade-in slide-in-from-top-1"
+              >
+                <div className="flex items-center justify-between gap-2 text-xs">
+                  <div className="flex items-center gap-2 text-primary font-medium">
+                    <Sparkles className="w-3.5 h-3.5 animate-pulse" />
+                    <span>{aiPhase || (aiLang === "en" ? "Analyzing…" : "Analyse en cours…")}</span>
+                  </div>
+                  <span className="tabular-nums text-muted-foreground">{Math.round(aiProgress)}%</span>
+                </div>
+                <Progress value={aiProgress} className="h-1.5" />
+                <p className="text-[11px] text-muted-foreground">
+                  {aiLang === "en"
+                    ? "The AI is reading your photos to write a professional description."
+                    : "L'IA analyse vos photos pour rédiger une description professionnelle."}
+                </p>
+              </div>
+            )}
             {doneCount === 0 && (
               <p className="text-xs text-muted-foreground">Astuce : ajoutez au moins une photo pour activer la génération IA.</p>
             )}
