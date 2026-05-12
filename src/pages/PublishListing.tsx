@@ -64,7 +64,38 @@ const PublishListing = () => {
     is_premium: false,
   });
   const [busy, setBusy] = useState(false);
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiLang, setAiLang] = useState<"fr" | "en">("fr");
   const [confirmPremiumOpen, setConfirmPremiumOpen] = useState(false);
+
+  const generateWithAI = async () => {
+    const urls = photos.filter((p) => p.status === "done" && p.url).map((p) => p.url!);
+    if (urls.length === 0) {
+      toast.error("Ajoutez au moins une photo (uploadée) pour utiliser l'IA.");
+      return;
+    }
+    const categoryName = categories.find((c) => c.id === form.category_id)?.name;
+    setAiBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-listing-description", {
+        body: { imageUrls: urls.slice(0, 6), categoryName, title: form.title || undefined, language: aiLang },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      const { title, description } = data as { title?: string; description?: string };
+      setForm((f) => ({
+        ...f,
+        title: !f.title && title ? title : f.title,
+        description: description || f.description,
+      }));
+      toast.success(aiLang === "en" ? "Description generated ✨" : "Description générée ✨");
+    } catch (e: any) {
+      toast.error(e?.message || "Échec de la génération IA");
+    } finally {
+      setAiBusy(false);
+    }
+  };
+
 
   const doneCount = photos.filter((p) => p.status === "done").length;
   const errorCount = photos.filter((p) => p.status === "error").length;
