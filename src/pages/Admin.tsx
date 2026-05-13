@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import Header from "@/components/Header";
 import PwaAnalyticsTab from "@/components/admin/PwaAnalyticsTab";
+import ModerationAITab from "@/components/admin/ModerationAITab";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
