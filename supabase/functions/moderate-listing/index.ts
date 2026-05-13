@@ -276,15 +276,6 @@ Deno.serve(async (req) => {
       metadata: { trust_score: finalScore, categories: verdict.categories },
     });
 
-    // Log activity
-    await admin.from("activity_logs").insert({
-      admin_id: listing.user_id, // system actor; admin_id is not nullable
-      action: `ai_moderation_${newStatus}`,
-      target_type: "listing",
-      target_id: listing.id,
-      metadata: { case_id: caseId, trust_score: finalScore, risk_level: riskLevel, verdict } as any,
-    });
-
     return new Response(
       JSON.stringify({ ok: true, case_id: caseId, status: newStatus, trust_score: finalScore, verdict }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
