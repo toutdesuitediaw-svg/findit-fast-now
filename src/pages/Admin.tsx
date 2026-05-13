@@ -511,6 +511,10 @@ const Admin = () => {
             <PwaAnalyticsTab />
           </TabsContent>
 
+          <TabsContent value="ai-moderation">
+            <ModerationAITab />
+          </TabsContent>
+
           {/* === DASHBOARD === */}
           <TabsContent value="dashboard">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
