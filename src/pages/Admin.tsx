@@ -4,7 +4,7 @@ import {
   Loader2, Shield, Trash2, Star, Eye, EyeOff, Plus, Pencil,
   LayoutDashboard, Users, Megaphone, AlertTriangle, FolderTree,
   CreditCard, Settings as SettingsIcon, ShieldCheck, ShieldOff, BadgeCheck,
-  History, CheckCircle2, XCircle, ArrowLeft, LogOut, KeyRound, Mail, BarChart3,
+  History, CheckCircle2, XCircle, ArrowLeft, LogOut, KeyRound, Mail, BarChart3, Sparkles,
 } from "lucide-react";
 import Header from "@/components/Header";
 import PwaAnalyticsTab from "@/components/admin/PwaAnalyticsTab";
