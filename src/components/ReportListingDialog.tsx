@@ -35,15 +35,19 @@ const ReportListingDialog = ({ listingId, open, onOpenChange }: Props) => {
     if (details.length > 1000) { toast.error("Détails trop longs (1000 max)"); return; }
 
     setSubmitting(true);
-    const { error } = await supabase.from("reports").insert({
-      reporter_id: user.id,
-      target_type: "listing",
-      target_id: listingId,
-      reason: trimmed,
-      details: details.trim() || null,
+    const { data, error } = await supabase.functions.invoke("submit-report", {
+      body: {
+        target_type: "listing",
+        target_id: listingId,
+        reason: trimmed,
+        details: details.trim() || null,
+      },
     });
     setSubmitting(false);
-    if (error) { toast.error(error.message); return; }
+    if (error || (data as any)?.error) {
+      toast.error((data as any)?.error ?? error?.message ?? "Erreur lors du signalement");
+      return;
+    }
     toast.success("Signalement envoyé. Merci !");
     onOpenChange(false);
     setReason("");
