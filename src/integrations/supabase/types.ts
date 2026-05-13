@@ -192,6 +192,7 @@ export type Database = {
       }
       listings: {
         Row: {
+          auto_removed: boolean
           category_id: string | null
           created_at: string
           currency: string
@@ -206,13 +207,16 @@ export type Database = {
           premium_until: string | null
           price: number | null
           price_type: string | null
+          quarantined_at: string | null
           rejection_reason: string | null
           title: string
+          trust_score: number | null
           updated_at: string
           user_id: string
           views_count: number
         }
         Insert: {
+          auto_removed?: boolean
           category_id?: string | null
           created_at?: string
           currency?: string
@@ -227,13 +231,16 @@ export type Database = {
           premium_until?: string | null
           price?: number | null
           price_type?: string | null
+          quarantined_at?: string | null
           rejection_reason?: string | null
           title: string
+          trust_score?: number | null
           updated_at?: string
           user_id: string
           views_count?: number
         }
         Update: {
+          auto_removed?: boolean
           category_id?: string | null
           created_at?: string
           currency?: string
@@ -248,8 +255,10 @@ export type Database = {
           premium_until?: string | null
           price?: number | null
           price_type?: string | null
+          quarantined_at?: string | null
           rejection_reason?: string | null
           title?: string
+          trust_score?: number | null
           updated_at?: string
           user_id?: string
           views_count?: number
@@ -300,6 +309,148 @@ export type Database = {
           sender_id?: string
         }
         Relationships: []
+      }
+      moderation_appeals: {
+        Row: {
+          admin_note: string | null
+          case_id: string
+          created_at: string
+          id: string
+          message: string
+          resolved_at: string | null
+          resolved_by: string | null
+          status: Database["public"]["Enums"]["appeal_status"]
+          user_id: string
+        }
+        Insert: {
+          admin_note?: string | null
+          case_id: string
+          created_at?: string
+          id?: string
+          message: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["appeal_status"]
+          user_id: string
+        }
+        Update: {
+          admin_note?: string | null
+          case_id?: string
+          created_at?: string
+          id?: string
+          message?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["appeal_status"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "moderation_appeals_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "moderation_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      moderation_cases: {
+        Row: {
+          ai_verdict: Json
+          auto_action: string | null
+          created_at: string
+          id: string
+          listing_id: string
+          reports_count: number
+          resolved_at: string | null
+          resolved_by: string | null
+          risk_level:
+            | Database["public"]["Enums"]["moderation_risk_level"]
+            | null
+          status: Database["public"]["Enums"]["moderation_case_status"]
+          trust_score: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ai_verdict?: Json
+          auto_action?: string | null
+          created_at?: string
+          id?: string
+          listing_id: string
+          reports_count?: number
+          resolved_at?: string | null
+          resolved_by?: string | null
+          risk_level?:
+            | Database["public"]["Enums"]["moderation_risk_level"]
+            | null
+          status?: Database["public"]["Enums"]["moderation_case_status"]
+          trust_score?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ai_verdict?: Json
+          auto_action?: string | null
+          created_at?: string
+          id?: string
+          listing_id?: string
+          reports_count?: number
+          resolved_at?: string | null
+          resolved_by?: string | null
+          risk_level?:
+            | Database["public"]["Enums"]["moderation_risk_level"]
+            | null
+          status?: Database["public"]["Enums"]["moderation_case_status"]
+          trust_score?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      moderation_notifications: {
+        Row: {
+          body: string | null
+          case_id: string | null
+          created_at: string
+          id: string
+          metadata: Json
+          read_at: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          case_id?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          read_at?: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          case_id?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          read_at?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "moderation_notifications_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "moderation_cases"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -376,11 +527,30 @@ export type Database = {
         }
         Relationships: []
       }
+      report_rate_limits: {
+        Row: {
+          count: number
+          day: string
+          user_id: string
+        }
+        Insert: {
+          count?: number
+          day?: string
+          user_id: string
+        }
+        Update: {
+          count?: number
+          day?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       reports: {
         Row: {
           created_at: string
           details: string | null
           id: string
+          is_valid: boolean
           reason: string
           reporter_id: string
           resolved_at: string | null
@@ -393,6 +563,7 @@ export type Database = {
           created_at?: string
           details?: string | null
           id?: string
+          is_valid?: boolean
           reason: string
           reporter_id: string
           resolved_at?: string | null
@@ -405,6 +576,7 @@ export type Database = {
           created_at?: string
           details?: string | null
           id?: string
+          is_valid?: boolean
           reason?: string
           reporter_id?: string
           resolved_at?: string | null
@@ -605,7 +777,15 @@ export type Database = {
       account_status: "active" | "suspended" | "banned"
       account_type: "particulier" | "professionnel"
       app_role: "admin" | "moderator" | "user"
+      appeal_status: "open" | "accepted" | "rejected"
       listing_status: "pending" | "approved" | "rejected"
+      moderation_case_status:
+        | "pending"
+        | "quarantined"
+        | "removed"
+        | "cleared"
+        | "appealed"
+      moderation_risk_level: "low" | "medium" | "high" | "critical"
       payment_method:
         | "wave"
         | "orange_money"
@@ -753,7 +933,16 @@ export const Constants = {
       account_status: ["active", "suspended", "banned"],
       account_type: ["particulier", "professionnel"],
       app_role: ["admin", "moderator", "user"],
+      appeal_status: ["open", "accepted", "rejected"],
       listing_status: ["pending", "approved", "rejected"],
+      moderation_case_status: [
+        "pending",
+        "quarantined",
+        "removed",
+        "cleared",
+        "appealed",
+      ],
+      moderation_risk_level: ["low", "medium", "high", "critical"],
       payment_method: ["wave", "orange_money", "mtn", "card", "cash", "other"],
       report_status: ["open", "reviewed", "dismissed", "actioned"],
       report_target: ["listing", "user"],

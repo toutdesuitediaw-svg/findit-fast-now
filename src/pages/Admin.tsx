@@ -4,10 +4,11 @@ import {
   Loader2, Shield, Trash2, Star, Eye, EyeOff, Plus, Pencil,
   LayoutDashboard, Users, Megaphone, AlertTriangle, FolderTree,
   CreditCard, Settings as SettingsIcon, ShieldCheck, ShieldOff, BadgeCheck,
-  History, CheckCircle2, XCircle, ArrowLeft, LogOut, KeyRound, Mail, BarChart3,
+  History, CheckCircle2, XCircle, ArrowLeft, LogOut, KeyRound, Mail, BarChart3, Sparkles,
 } from "lucide-react";
 import Header from "@/components/Header";
 import PwaAnalyticsTab from "@/components/admin/PwaAnalyticsTab";
+import ModerationAITab from "@/components/admin/ModerationAITab";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -499,6 +500,7 @@ const Admin = () => {
             <TabsTrigger value="users"><Users className="w-4 h-4 mr-1" />Utilisateurs</TabsTrigger>
             <TabsTrigger value="listings"><Megaphone className="w-4 h-4 mr-1" />Annonces</TabsTrigger>
             <TabsTrigger value="moderation"><AlertTriangle className="w-4 h-4 mr-1" />Modération</TabsTrigger>
+            <TabsTrigger value="ai-moderation"><Sparkles className="w-4 h-4 mr-1" />Modération IA</TabsTrigger>
             <TabsTrigger value="payments"><CreditCard className="w-4 h-4 mr-1" />Paiements</TabsTrigger>
             <TabsTrigger value="categories"><FolderTree className="w-4 h-4 mr-1" />Catégories</TabsTrigger>
             <TabsTrigger value="analytics"><BarChart3 className="w-4 h-4 mr-1" />Analytics PWA</TabsTrigger>
@@ -507,6 +509,10 @@ const Admin = () => {
 
           <TabsContent value="analytics">
             <PwaAnalyticsTab />
+          </TabsContent>
+
+          <TabsContent value="ai-moderation">
+            <ModerationAITab />
           </TabsContent>
 
           {/* === DASHBOARD === */}

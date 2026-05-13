@@ -24,6 +24,7 @@ const Cart = lazy(() => import("./pages/Cart.tsx"));
 const OrderConfirmation = lazy(() => import("./pages/OrderConfirmation.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 const Installer = lazy(() => import("./pages/Installer.tsx"));
+const ModerationCase = lazy(() => import("./pages/ModerationCase.tsx"));
 
 const queryClient = new QueryClient();
 
@@ -56,6 +57,7 @@ const App = () => (
               <Route path="/panier" element={<RequireAuth><Cart /></RequireAuth>} />
               <Route path="/commande/confirmation" element={<OrderConfirmation />} />
               <Route path="/installer" element={<Installer />} />
+              <Route path="/moderation/:caseId" element={<RequireAuth><ModerationCase /></RequireAuth>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
