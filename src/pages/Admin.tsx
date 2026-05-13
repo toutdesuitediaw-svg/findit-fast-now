@@ -500,6 +500,7 @@ const Admin = () => {
             <TabsTrigger value="users"><Users className="w-4 h-4 mr-1" />Utilisateurs</TabsTrigger>
             <TabsTrigger value="listings"><Megaphone className="w-4 h-4 mr-1" />Annonces</TabsTrigger>
             <TabsTrigger value="moderation"><AlertTriangle className="w-4 h-4 mr-1" />Modération</TabsTrigger>
+            <TabsTrigger value="ai-moderation"><Sparkles className="w-4 h-4 mr-1" />Modération IA</TabsTrigger>
             <TabsTrigger value="payments"><CreditCard className="w-4 h-4 mr-1" />Paiements</TabsTrigger>
             <TabsTrigger value="categories"><FolderTree className="w-4 h-4 mr-1" />Catégories</TabsTrigger>
             <TabsTrigger value="analytics"><BarChart3 className="w-4 h-4 mr-1" />Analytics PWA</TabsTrigger>
