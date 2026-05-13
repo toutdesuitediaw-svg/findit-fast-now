@@ -24,6 +24,7 @@ const Cart = lazy(() => import("./pages/Cart.tsx"));
 const OrderConfirmation = lazy(() => import("./pages/OrderConfirmation.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 const Installer = lazy(() => import("./pages/Installer.tsx"));
+const ModerationCase = lazy(() => import("./pages/ModerationCase.tsx"));
 
 const queryClient = new QueryClient();
 
