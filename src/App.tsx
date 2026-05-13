@@ -57,6 +57,7 @@ const App = () => (
               <Route path="/panier" element={<RequireAuth><Cart /></RequireAuth>} />
               <Route path="/commande/confirmation" element={<OrderConfirmation />} />
               <Route path="/installer" element={<Installer />} />
+              <Route path="/moderation/:caseId" element={<RequireAuth><ModerationCase /></RequireAuth>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
