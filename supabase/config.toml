@@ -11,3 +11,7 @@ project_id = "yyendbkedzfnsmjiclhg"
     verify_jwt = true
   [functions.generate-listing-description]
     verify_jwt = true
+  [functions.moderate-listing]
+    verify_jwt = false
+  [functions.submit-report]
+    verify_jwt = true
