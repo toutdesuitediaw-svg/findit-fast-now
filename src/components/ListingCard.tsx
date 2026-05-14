@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import ReportListingDialog from "@/components/ReportListingDialog";
+import { formatPublished, getExpiry, isNew } from "@/lib/listingDate";
 
 export interface ListingCardData {
   id: string;
@@ -14,6 +15,8 @@ export interface ListingCardData {
   location: string | null;
   images: string[];
   is_premium: boolean;
+  published_at?: string | null;
+  expires_at?: string | null;
 }
 
 const ListingCard = ({ listing }: { listing: ListingCardData }) => {
