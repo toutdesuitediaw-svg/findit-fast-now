@@ -14,6 +14,9 @@ import Footer from "@/components/Footer";
 import ImageGallery from "@/components/ImageGallery";
 import { toast } from "sonner";
 import { useSEO, SITE_URL } from "@/lib/seo";
+import { formatPublished, formatUpdated, getExpiry } from "@/lib/listingDate";
+import { Badge } from "@/components/ui/badge";
+import { RefreshCw, AlertTriangle } from "lucide-react";
 
 interface ListingDetail {
   id: string;
@@ -26,6 +29,13 @@ interface ListingDetail {
   is_premium: boolean;
   premium_until: string | null;
   created_at: string;
+  updated_at: string;
+  published_at: string | null;
+  expires_at: string | null;
+  is_active: boolean;
+  quarantined_at: string | null;
+  auto_removed: boolean;
+  trust_score: number | null;
   user_id: string;
   category: { name: string } | null;
   seller: { display_name: string | null; phone: string | null; whatsapp: string | null; city: string | null } | null;
