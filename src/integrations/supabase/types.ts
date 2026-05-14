@@ -829,7 +829,6 @@ export type Database = {
           read_ct: number
         }[]
       }
-      renew_listing: { Args: { _listing_id: string }; Returns: Json }
     }
     Enums: {
       account_status: "active" | "suspended" | "banned"
