@@ -1,143 +1,86 @@
-# Système de modération IA — TOUT SUITE ANNONCES
+# Plan — Durée des annonces, modération configurable & sécurité
 
-## Vue d'ensemble
-Mise en place d'un pipeline complet : signalements utilisateurs → analyse IA automatique → score de confiance → action (quarantaine / suppression / alerte) → contestation possible → dashboard admin temps réel.
+## 1. Schéma BDD (migration)
 
----
+**Table `listings`** — ajouter colonnes :
+- `published_at timestamptz` (default `now()`) — date affichée
+- `expires_at timestamptz` — par défaut `published_at + 365j`
+- `archived_at timestamptz` — date d'archivage
+- `renewed_count int default 0`
+- `last_renewed_at timestamptz`
+- `expiry_notified_30d`, `expiry_notified_7d`, `expiry_notified_0d` (bool) — anti double-envoi
 
-## 1. Base de données (migration)
+**Trigger** `set_listing_lifecycle` BEFORE INSERT/UPDATE :
+- Sur INSERT : si `expires_at` null → `now() + interval '365 days'`
+- Empêche le client de modifier `expires_at`, `published_at`, `renewed_count` directement (forcé via fonction RPC)
 
-Nouvelles tables :
+**Fonction RPC** `renew_listing(listing_id uuid)` SECURITY DEFINER :
+- Vérifie ownership
+- Anti-spam : un seul renouvellement / 24h, max 6/an si non premium
+- Étend `expires_at` de 365 jours, incrémente `renewed_count`, met `published_at = now()`, réactive si archivée
 
-- **`moderation_cases`** — un dossier par annonce mise sous analyse
-  - `listing_id`, `user_id` (vendeur), `status` (`pending`, `quarantined`, `removed`, `cleared`, `appealed`)
-  - `trust_score` (0–100), `risk_level` (`low`/`medium`/`high`/`critical`)
-  - `ai_verdict` (jsonb : catégories détectées, raisons, citations)
-  - `reports_count`, `auto_action`, `created_at`, `resolved_at`, `resolved_by`
-
-- **`moderation_appeals`** — contestations vendeur
-  - `case_id`, `user_id`, `message`, `status` (`open`/`accepted`/`rejected`), timestamps, `admin_note`
-
-- **`moderation_notifications`** — notifications in-app vendeur + admin
-  - `user_id`, `case_id`, `type`, `title`, `body`, `read_at`
-
-- **`report_rate_limits`** — anti-abus signalements
-  - `user_id`, `day` (date), `count` — limite N signalements/jour
-
-Modifications :
-- `listings` : ajouter `quarantined_at`, `trust_score`, `auto_removed`
-- `reports` : ajouter `is_valid` (bool, calculé via heuristique anti-spam)
-
-Trigger Postgres :
-- Sur `INSERT` dans `reports` → compte les signalements valides distincts (utilisateurs différents) sur la même annonce. Si ≥ 2 → crée/upsert un `moderation_case` `pending` et appelle l'edge function via `pg_net` pour analyse IA.
-
-RLS :
-- Vendeur voit ses propres `moderation_cases` + `moderation_appeals` + `moderation_notifications`
-- Admin voit/gère tout
-- Vendeur peut créer un `moderation_appeals` pour ses cases
-
----
-
-## 2. Edge Function `moderate-listing` (IA)
-
-Déclenchée par le trigger DB ou manuellement par un admin.
-
-Fait :
-1. Charge l'annonce (titre, description, images, vendeur, historique)
-2. Récupère contexte vendeur : nb annonces, nb signalements passés, ancienneté, bannissements
-3. Appelle Lovable AI Gateway (`google/gemini-3-flash-preview`) avec **tool calling structuré** :
-   - input : texte + image URLs (multimodal)
-   - tool `moderation_verdict` retournant : `categories[]` (scam, adult, weapons, fake, spam, stolen_image, violence…), `severity`, `confidence`, `trust_score` 0-100, `recommended_action` (`keep`/`quarantine`/`remove`), `reasons[]`, `vendor_risk`
-4. Combine score IA + signaux comportementaux (poids fixes) → `final_trust_score`
-5. Applique la règle :
-   - `score < 25` ou `severity = critical` → `auto_removed`, `is_active=false`, `auto_removed=true`
-   - `score 25–55` → `quarantined`, `is_active=false`
-   - `score > 55` → `cleared` (laisse en ligne, garde le case pour audit)
-6. Insère notifications admin + vendeur
-7. Log dans `activity_logs`
-
-Sécurité : `verify_jwt = false` (appelé par trigger), valide via secret partagé (header `x-moderation-secret`).
-
-Gère 429/402 du gateway proprement.
-
----
-
-## 3. Edge Function `submit-report` (anti-abus)
-
-Wrap autour de l'insertion de signalement :
-- Vérifie utilisateur actif (`profiles.status = 'active'`)
-- Vérifie `report_rate_limits` (max 5/jour)
-- Détecte attaques groupées : si même cible reçoit > 10 reports en < 1h depuis nouveaux comptes → marque `is_valid=false`
-- Insère le report → trigger DB prend le relais
-
-`verify_jwt = true`.
-
----
-
-## 4. UI Admin — `/admin` nouvel onglet "Modération IA"
-
-`src/components/admin/ModerationTab.tsx` :
-- **KPIs en haut** : cases ouverts, auto-supprimés (24h), taux fraude, signalements/jour
-- **Tableau filtre** : statut, niveau de risque, catégorie
-- **Carte case** : aperçu annonce, score (gauge or/noir), verdict IA (badges catégories), raisons, signalements liés, vendeur + risk score
-- **Actions admin** : confirmer suppression, restaurer (`cleared`), bannir vendeur, voir historique
-- **Onglet "Contestations"** : liste des appeals, accepter/refuser avec note
-
-Realtime via Supabase channel sur `moderation_cases`.
-
-Design : noir/or, glass-morphism, badges colorés par sévérité, animations Framer Motion légères.
-
----
-
-## 5. UI Vendeur — page "Mes annonces" / nouveau `/moderation/:caseId`
-
-- Si annonce en quarantaine/supprimée : badge visible + bouton "Voir le motif"
-- Page détail : verdict IA résumé en français, raisons, formulaire **"Contester la décision"** (textarea + envoi)
-- Notifications cloche dans header (compteur `moderation_notifications` non lues)
-
----
-
-## 6. Configuration
-
-`supabase/config.toml` :
+**Table `site_settings`** — ajouter clé `moderation_config` (jsonb) :
+```json
+{
+  "min_distinct_reports": 2,
+  "auto_remove_below": 25,
+  "quarantine_below": 55,
+  "ai_weight": 0.7,
+  "behavior_weight": 0.3
+}
 ```
-[functions.moderate-listing]
-verify_jwt = false
-[functions.submit-report]
-verify_jwt = true
-```
+Lue par le trigger `handle_new_report` et l'edge function `moderate-listing`.
 
-Secret à ajouter : `MODERATION_HOOK_SECRET` (généré, partagé entre trigger et edge).
+**Table `moderation_decisions`** (historique) :
+- `case_id`, `listing_id`, `admin_id`, `action` (`quarantine|remove|restore|reanalyze`), `note`, `created_at`
+- RLS : admins lecture/écriture, propriétaire annonce lecture seule.
 
----
+**Index** :
+- `listings(expires_at) WHERE is_active = true`
+- `listings(archived_at) WHERE archived_at IS NOT NULL`
 
-## 7. Détails techniques (pour devs)
+## 2. Edge functions
 
-```text
-report INSERT
-   ↓ trigger
-   count distinct valid reports per listing
-   ↓ if ≥ 2
-   upsert moderation_case (pending)
-   ↓ pg_net.http_post
-   edge: moderate-listing
-   ↓ Lovable AI (multimodal + tool calling)
-   compute trust_score + action
-   ↓
-   update listing + case + notifications
-   ↓
-   admin dashboard (realtime)
-```
+**Nouvelle `listings-lifecycle-cron`** (verify_jwt = false, secret partagé) :
+1. Marque expirées : `is_active=false`, `archived_at=now()` quand `expires_at < now()` et non archivée
+2. Suppression définitive : delete des listings `archived_at < now() - interval '90 days'`
+3. Notifications 30j / 7j / 0j → insère dans `moderation_notifications` (réutilise la table) avec `type='expiry_*'`
+4. Idempotent via flags `expiry_notified_*`
 
-Score final : `0.7 * AI_score + 0.3 * behavior_score` où behavior_score pénalise (anciens reports validés, compte récent, fréquence publication anormale).
+**Cron pg_cron** (via `supabase--insert`) : exécution quotidienne 03:00 UTC → `net.http_post` vers la function avec secret stocké dans `site_settings.lifecycle_hook`.
 
-Anti-abus signalements : table `report_rate_limits` + heuristique nouveaux comptes.
+**`moderate-listing`** : lit `moderation_config` plutôt que constantes hardcodées.
 
----
+**`submit-report`** : lit `min_distinct_reports` et seuil de rate-limit depuis `moderation_config`.
 
-## Hors-scope (proposé pour plus tard)
-- Détection IP suspectes (nécessite logging IP côté edge auth — RGPD à clarifier)
-- Vérification d'identité KYC
-- Détection d'images dupliquées par hash perceptuel (pHash) — peut être ajouté V2
+## 3. Frontend
 
-Confirme et je l'implémente.
+**Helper `src/lib/listingDate.ts`** :
+- `formatPublishedAt(date)` → "aujourd'hui" / "il y a 2 jours" / "le 12 mai 2026" (date-fns fr)
+- `getExpiryStatus(expiresAt)` → `{ status: 'fresh'|'expiring_soon'|'expired', daysLeft }`
+
+**`ListingCard.tsx`** : badges "Nouveau" (<7j), "Expire bientôt" (<7j), "Expirée"; ligne "Publié il y a X".
+
+**`ListingDetail.tsx`** :
+- Bloc date publication / dernière mise à jour / expiration
+- Si propriétaire & expire <30j : bouton "🔁 Renouveler" (appelle RPC)
+- Bandeau statut modération : `quarantined` / `auto_removed` avec résumé `ai_verdict` (catégories, score, raison)
+- Lien "Voir détails / Contester" → `/moderation/case/:id`
+
+**`Dashboard.tsx`** : colonnes "Publiée le", "Expire dans", actions Renouveler / Archiver.
+
+**`Admin.tsx` — Onglet Annonces** : nouveau sous-onglet "Archives" + KPI (actives, expirées, expirent <7j, taux renouvellement).
+
+**`ModerationAITab.tsx`** :
+- Boutons par cas : **Mettre en quarantaine**, **Supprimer**, **Rétablir**, **Réanalyser** (déjà présent)
+- Insère dans `moderation_decisions` à chaque action
+- Onglet "Historique" : liste les décisions
+- Carte "Paramètres modération" : sliders pour `min_distinct_reports` (1-5), `auto_remove_below`, `quarantine_below` → upsert `site_settings.moderation_config`
+
+## 4. Sécurité — linter Supabase
+
+Lancer `supabase--linter`, corriger tous les WARN/ERROR (typiquement: `search_path` manquants sur fonctions, RLS manquantes, `security definer` views). Itérer jusqu'à 0 alerte.
+
+## 5. Hors-scope (à signaler)
+- Renouvellement automatique premium : préparé via `renewed_count` mais pas planifié dans ce lot
+- Notifications email d'expiration : créées en in-app uniquement (les emails transactionnels nécessiteraient le scaffold; à faire en lot suivant si demandé)
