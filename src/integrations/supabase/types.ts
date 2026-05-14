@@ -192,23 +192,31 @@ export type Database = {
       }
       listings: {
         Row: {
+          archived_at: string | null
           auto_removed: boolean
           category_id: string | null
           created_at: string
           currency: string
           description: string
+          expires_at: string
+          expiry_notified_0d: boolean
+          expiry_notified_30d: boolean
+          expiry_notified_7d: boolean
           id: string
           images: string[]
           is_active: boolean
           is_featured: boolean
           is_premium: boolean
+          last_renewed_at: string | null
           location: string | null
           moderation_status: Database["public"]["Enums"]["listing_status"]
           premium_until: string | null
           price: number | null
           price_type: string | null
+          published_at: string
           quarantined_at: string | null
           rejection_reason: string | null
+          renewed_count: number
           title: string
           trust_score: number | null
           updated_at: string
@@ -216,23 +224,31 @@ export type Database = {
           views_count: number
         }
         Insert: {
+          archived_at?: string | null
           auto_removed?: boolean
           category_id?: string | null
           created_at?: string
           currency?: string
           description: string
+          expires_at?: string
+          expiry_notified_0d?: boolean
+          expiry_notified_30d?: boolean
+          expiry_notified_7d?: boolean
           id?: string
           images?: string[]
           is_active?: boolean
           is_featured?: boolean
           is_premium?: boolean
+          last_renewed_at?: string | null
           location?: string | null
           moderation_status?: Database["public"]["Enums"]["listing_status"]
           premium_until?: string | null
           price?: number | null
           price_type?: string | null
+          published_at?: string
           quarantined_at?: string | null
           rejection_reason?: string | null
+          renewed_count?: number
           title: string
           trust_score?: number | null
           updated_at?: string
@@ -240,23 +256,31 @@ export type Database = {
           views_count?: number
         }
         Update: {
+          archived_at?: string | null
           auto_removed?: boolean
           category_id?: string | null
           created_at?: string
           currency?: string
           description?: string
+          expires_at?: string
+          expiry_notified_0d?: boolean
+          expiry_notified_30d?: boolean
+          expiry_notified_7d?: boolean
           id?: string
           images?: string[]
           is_active?: boolean
           is_featured?: boolean
           is_premium?: boolean
+          last_renewed_at?: string | null
           location?: string | null
           moderation_status?: Database["public"]["Enums"]["listing_status"]
           premium_until?: string | null
           price?: number | null
           price_type?: string | null
+          published_at?: string
           quarantined_at?: string | null
           rejection_reason?: string | null
+          renewed_count?: number
           title?: string
           trust_score?: number | null
           updated_at?: string
@@ -405,6 +429,39 @@ export type Database = {
           trust_score?: number | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      moderation_decisions: {
+        Row: {
+          action: string
+          admin_id: string | null
+          case_id: string | null
+          created_at: string
+          id: string
+          listing_id: string
+          metadata: Json
+          note: string | null
+        }
+        Insert: {
+          action: string
+          admin_id?: string | null
+          case_id?: string | null
+          created_at?: string
+          id?: string
+          listing_id: string
+          metadata?: Json
+          note?: string | null
+        }
+        Update: {
+          action?: string
+          admin_id?: string | null
+          case_id?: string | null
+          created_at?: string
+          id?: string
+          listing_id?: string
+          metadata?: Json
+          note?: string | null
         }
         Relationships: []
       }
@@ -772,6 +829,7 @@ export type Database = {
           read_ct: number
         }[]
       }
+      renew_listing: { Args: { _listing_id: string }; Returns: Json }
     }
     Enums: {
       account_status: "active" | "suspended" | "banned"
