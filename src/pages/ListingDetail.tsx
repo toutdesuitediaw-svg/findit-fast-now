@@ -14,6 +14,9 @@ import Footer from "@/components/Footer";
 import ImageGallery from "@/components/ImageGallery";
 import { toast } from "sonner";
 import { useSEO, SITE_URL } from "@/lib/seo";
+import { formatPublished, formatUpdated, getExpiry } from "@/lib/listingDate";
+import { Badge } from "@/components/ui/badge";
+import { RefreshCw, AlertTriangle } from "lucide-react";
 
 interface ListingDetail {
   id: string;
@@ -26,6 +29,13 @@ interface ListingDetail {
   is_premium: boolean;
   premium_until: string | null;
   created_at: string;
+  updated_at: string;
+  published_at: string | null;
+  expires_at: string | null;
+  is_active: boolean;
+  quarantined_at: string | null;
+  auto_removed: boolean;
+  trust_score: number | null;
   user_id: string;
   category: { name: string } | null;
   seller: { display_name: string | null; phone: string | null; whatsapp: string | null; city: string | null } | null;
@@ -254,9 +264,50 @@ const ListingDetail = () => {
                   <MapPin className="w-4 h-4 text-primary" /> {listing.location}
                 </p>
               )}
-              <p className="text-xs text-muted-foreground">
-                Publiée le {new Date(listing.created_at).toLocaleDateString("fr-FR")}
-              </p>
+              <div className="text-xs text-muted-foreground space-y-0.5 pt-1 border-t border-border/50">
+                <p>{formatPublished(listing.published_at || listing.created_at)}</p>
+                {listing.updated_at && listing.updated_at !== listing.created_at && (
+                  <p>{formatUpdated(listing.updated_at)}</p>
+                )}
+                {(() => {
+                  const exp = getExpiry(listing.expires_at);
+                  if (!exp.label) return null;
+                  const cls = exp.status === "expired" ? "text-destructive" : exp.status === "imminent" ? "text-amber-500" : exp.status === "soon" ? "text-amber-400/80" : "text-muted-foreground";
+                  return <p className={cls}>{exp.label}</p>;
+                })()}
+              </div>
+              {(listing.quarantined_at || listing.auto_removed) && (
+                <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-xs space-y-2">
+                  <div className="flex items-center gap-2 font-semibold text-destructive">
+                    <AlertTriangle className="w-4 h-4" />
+                    {listing.auto_removed ? "Annonce supprimée par modération IA" : "Annonce en quarantaine"}
+                  </div>
+                  {typeof listing.trust_score === "number" && (
+                    <p>Score de confiance : {listing.trust_score}/100</p>
+                  )}
+                  <Button variant="outline" size="sm" className="w-full" onClick={() => navigate(`/moderation/case/${listing.id}`)}>
+                    Voir le motif et contester
+                  </Button>
+                </div>
+              )}
+              {user?.id === listing.user_id && (() => {
+                const exp = getExpiry(listing.expires_at);
+                if (exp.status === "fresh") return null;
+                return (
+                  <Button
+                    variant="gold"
+                    size="sm"
+                    className="w-full"
+                    onClick={async () => {
+                      const { data, error } = await supabase.functions.invoke("renew-listing", { body: { listing_id: listing.id } });
+                      if (error || (data as any)?.error) { toast.error((data as any)?.error || error?.message || "Erreur"); return; }
+                      toast.success("Annonce renouvelée pour 1 an");
+                    }}
+                  >
+                    <RefreshCw className="w-4 h-4" /> Renouveler l'annonce
+                  </Button>
+                );
+              })()}
             </div>
 
             <div className="bg-card border border-border rounded-2xl p-6 space-y-4">

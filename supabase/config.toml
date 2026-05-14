@@ -15,3 +15,7 @@ project_id = "yyendbkedzfnsmjiclhg"
     verify_jwt = false
   [functions.submit-report]
     verify_jwt = true
+  [functions.renew-listing]
+    verify_jwt = true
+  [functions.listings-lifecycle-cron]
+    verify_jwt = false

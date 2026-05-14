@@ -10,7 +10,7 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-const MAX_REPORTS_PER_DAY = 5;
+const DEFAULT_MAX_REPORTS_PER_DAY = 5;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -56,6 +56,10 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Configurable rate limit
+    const { data: cfgRow } = await admin.from("site_settings").select("value").eq("key", "moderation_config").maybeSingle();
+    const maxPerDay = ((cfgRow?.value as any)?.max_reports_per_day as number | undefined) ?? DEFAULT_MAX_REPORTS_PER_DAY;
+
     // Rate limit per day
     const today = new Date().toISOString().slice(0, 10);
     const { data: rl } = await admin
@@ -64,7 +68,7 @@ Deno.serve(async (req) => {
       .eq("user_id", userId)
       .eq("day", today)
       .maybeSingle();
-    if ((rl?.count ?? 0) >= MAX_REPORTS_PER_DAY) {
+    if ((rl?.count ?? 0) >= maxPerDay) {
       return new Response(JSON.stringify({ error: "Limite quotidienne de signalements atteinte." }), {
         status: 429,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

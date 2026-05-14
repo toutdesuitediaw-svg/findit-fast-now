@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import ReportListingDialog from "@/components/ReportListingDialog";
+import { formatPublished, getExpiry, isNew } from "@/lib/listingDate";
 
 export interface ListingCardData {
   id: string;
@@ -14,6 +15,8 @@ export interface ListingCardData {
   location: string | null;
   images: string[];
   is_premium: boolean;
+  published_at?: string | null;
+  expires_at?: string | null;
 }
 
 const ListingCard = ({ listing }: { listing: ListingCardData }) => {
@@ -77,6 +80,19 @@ const ListingCard = ({ listing }: { listing: ListingCardData }) => {
             PREMIUM
           </span>
         )}
+        {!listing.is_premium && isNew(listing.published_at) && (
+          <span className="absolute top-3 left-3 bg-emerald-500 text-white text-[10px] font-bold tracking-widest px-2.5 py-1 rounded">
+            NOUVEAU
+          </span>
+        )}
+        {(() => {
+          const exp = getExpiry(listing.expires_at);
+          if (exp.status === "expired")
+            return <span className="absolute bottom-3 left-3 bg-destructive text-destructive-foreground text-[10px] font-bold tracking-widest px-2.5 py-1 rounded">EXPIRÉE</span>;
+          if (exp.status === "imminent")
+            return <span className="absolute bottom-3 left-3 bg-amber-500 text-white text-[10px] font-bold tracking-widest px-2.5 py-1 rounded">EXPIRE BIENTÔT</span>;
+          return null;
+        })()}
         <button
           aria-label="Favoris"
           onClick={toggleFav}
@@ -95,6 +111,9 @@ const ListingCard = ({ listing }: { listing: ListingCardData }) => {
       <div className="p-4 space-y-1">
         <h3 className="font-semibold text-foreground line-clamp-1">{listing.title}</h3>
         {listing.location && <p className="text-xs text-muted-foreground">{listing.location}</p>}
+        {listing.published_at && (
+          <p className="text-[11px] text-muted-foreground/80">{formatPublished(listing.published_at)}</p>
+        )}
         <p className="pt-2 font-bold text-primary text-lg">{price}</p>
       </div>
       <ReportListingDialog listingId={listing.id} open={reportOpen} onOpenChange={setReportOpen} />
