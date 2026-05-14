@@ -220,18 +220,26 @@ Deno.serve(async (req) => {
     if (profile?.status === "suspended" || profile?.status === "banned") behavior -= 40;
     behavior = clamp(behavior, 0, 100);
 
-    const finalScore = Math.round(0.7 * verdict.trust_score + 0.3 * behavior);
+    // Load configurable thresholds
+    const { data: cfgRow } = await admin.from("site_settings").select("value").eq("key", "moderation_config").maybeSingle();
+    const cfg = (cfgRow?.value as any) || {};
+    const aiW = typeof cfg.ai_weight === "number" ? cfg.ai_weight : 0.7;
+    const behW = typeof cfg.behavior_weight === "number" ? cfg.behavior_weight : 0.3;
+    const removeBelow = typeof cfg.auto_remove_below === "number" ? cfg.auto_remove_below : 25;
+    const quarantineBelow = typeof cfg.quarantine_below === "number" ? cfg.quarantine_below : 55;
+
+    const finalScore = Math.round(aiW * verdict.trust_score + behW * behavior);
 
     // Decide
     let newStatus: "removed" | "quarantined" | "cleared" = "cleared";
     let riskLevel: "low" | "medium" | "high" | "critical" = "low";
     let listingPatch: Record<string, unknown> = {};
 
-    if (verdict.severity === "critical" || finalScore < 25 || verdict.recommended_action === "remove") {
+    if (verdict.severity === "critical" || finalScore < removeBelow || verdict.recommended_action === "remove") {
       newStatus = "removed";
       riskLevel = "critical";
       listingPatch = { is_active: false, auto_removed: true, quarantined_at: new Date().toISOString(), trust_score: finalScore };
-    } else if (finalScore < 55 || verdict.recommended_action === "quarantine") {
+    } else if (finalScore < quarantineBelow || verdict.recommended_action === "quarantine") {
       newStatus = "quarantined";
       riskLevel = finalScore < 40 ? "high" : "medium";
       listingPatch = { is_active: false, quarantined_at: new Date().toISOString(), trust_score: finalScore };
