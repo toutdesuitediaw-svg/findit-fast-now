@@ -340,6 +340,24 @@ const PublishListing = () => {
     if (item) void uploadPhoto(id, item.file);
   };
 
+  const replaceFile = (id: string, file: File) => {
+    if (file.size > 5 * 1024 * 1024 || !file.type.startsWith("image/")) {
+      toast.error("Image invalide (max 5MB, images uniquement)");
+      return;
+    }
+    // Cancel any in-flight upload for this slot
+    cancelledRef.current.add(id);
+    const newPreview = URL.createObjectURL(file);
+    setPhotos((prev) =>
+      prev.map((p) => {
+        if (p.id !== id) return p;
+        if (p.preview.startsWith("blob:")) URL.revokeObjectURL(p.preview);
+        return { ...p, file, preview: newPreview, status: "pending", error: undefined, url: undefined };
+      }),
+    );
+    void uploadPhoto(id, file);
+  };
+
   const clearAllFiles = () => {
     photos.forEach((p) => p.preview.startsWith("blob:") && URL.revokeObjectURL(p.preview));
     setPhotos([]);
