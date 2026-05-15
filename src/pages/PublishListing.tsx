@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
-import { AlertCircle, Check, ImagePlus, Loader2, RotateCw, Sparkles, Star, Trash2, TriangleAlert, X, Zap } from "lucide-react";
+import { AlertCircle, Check, ImagePlus, Loader2, Pencil, RotateCw, Sparkles, Star, Trash2, TriangleAlert, X, Zap } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
