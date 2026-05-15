@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Heart, Loader2, LogOut, Plus, Trash2, Flag, MessageSquare } from "lucide-react";
+import { Heart, Loader2, LogOut, Plus, Trash2, Flag, MessageSquare, Pencil } from "lucide-react";
 import MessagesTab from "@/components/MessagesTab";
+import EditListingDialog from "@/components/EditListingDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,8 @@ interface Report {
 interface Listing {
   id: string;
   title: string;
+  description?: string | null;
+  category_id?: string | null;
   price: number | null;
   currency: string;
   location: string | null;
@@ -41,6 +44,7 @@ const Dashboard = () => {
   const [reports, setReports] = useState<Report[]>([]);
   const [profile, setProfile] = useState<{ display_name: string | null } | null>(null);
   const [busy, setBusy] = useState(true);
+  const [editing, setEditing] = useState<Listing | null>(null);
 
   useEffect(() => {
     if (!loading && !user) navigate("/auth", { replace: true });
@@ -181,13 +185,18 @@ const Dashboard = () => {
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
                 {myListings.map((l) => (
                   <article key={l.id} className="rounded-2xl bg-card border border-border overflow-hidden">
-                    <div className="aspect-[4/3] bg-secondary overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/annonce/${l.id}`)}
+                      className="block w-full aspect-[4/3] bg-secondary overflow-hidden group"
+                      aria-label={`Voir l'annonce ${l.title}`}
+                    >
                       {l.images[0] ? (
-                        <img src={l.images[0]} alt={l.title} className="w-full h-full object-cover" />
+                        <img src={l.images[0]} alt={l.title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">Pas de photo</div>
                       )}
-                    </div>
+                    </button>
                     <div className="p-4 space-y-2">
                       <div className="flex items-start justify-between gap-2">
                         <h3 className="font-semibold line-clamp-1">{l.title}</h3>
@@ -202,9 +211,14 @@ const Dashboard = () => {
                           })}
                         </p>
                       )}
-                      <Button variant="ghost" size="sm" onClick={() => deleteListing(l.id)} className="text-destructive hover:text-destructive">
-                        <Trash2 className="w-4 h-4" /> Supprimer
-                      </Button>
+                      <div className="flex items-center gap-1 pt-1">
+                        <Button variant="outlineGold" size="sm" onClick={() => setEditing(l)}>
+                          <Pencil className="w-4 h-4" /> Modifier
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => deleteListing(l.id)} className="text-destructive hover:text-destructive">
+                          <Trash2 className="w-4 h-4" /> Supprimer
+                        </Button>
+                      </div>
                     </div>
                   </article>
                 ))}
@@ -269,6 +283,15 @@ const Dashboard = () => {
           </TabsContent>
         </Tabs>
       </main>
+      <EditListingDialog
+        open={!!editing}
+        onOpenChange={(v) => { if (!v) setEditing(null); }}
+        listing={editing}
+        onSaved={(updated) => {
+          setMyListings((prev) => prev.map((x) => (x.id === updated.id ? { ...x, ...updated } : x)));
+          setEditing(null);
+        }}
+      />
       <Footer />
     </div>
   );
