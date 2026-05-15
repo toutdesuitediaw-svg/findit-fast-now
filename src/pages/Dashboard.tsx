@@ -44,6 +44,7 @@ const Dashboard = () => {
   const [reports, setReports] = useState<Report[]>([]);
   const [profile, setProfile] = useState<{ display_name: string | null } | null>(null);
   const [busy, setBusy] = useState(true);
+  const [editing, setEditing] = useState<Listing | null>(null);
 
   useEffect(() => {
     if (!loading && !user) navigate("/auth", { replace: true });
