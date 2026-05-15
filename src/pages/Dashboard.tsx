@@ -283,6 +283,15 @@ const Dashboard = () => {
           </TabsContent>
         </Tabs>
       </main>
+      <EditListingDialog
+        open={!!editing}
+        onOpenChange={(v) => { if (!v) setEditing(null); }}
+        listing={editing}
+        onSaved={(updated) => {
+          setMyListings((prev) => prev.map((x) => (x.id === updated.id ? { ...x, ...updated } : x)));
+          setEditing(null);
+        }}
+      />
       <Footer />
     </div>
   );
