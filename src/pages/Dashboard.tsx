@@ -25,6 +25,8 @@ interface Report {
 interface Listing {
   id: string;
   title: string;
+  description?: string | null;
+  category_id?: string | null;
   price: number | null;
   currency: string;
   location: string | null;
