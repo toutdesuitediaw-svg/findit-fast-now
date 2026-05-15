@@ -12,19 +12,45 @@ import IOSInstallHint from "./components/IOSInstallHint.tsx";
 
 const Auth = lazy(() => import("./pages/Auth.tsx"));
 const AuthCallback = lazy(() => import("./pages/AuthCallback.tsx"));
-const Dashboard = lazy(() => import("./pages/Dashboard.tsx"));
-const Profile = lazy(() => import("./pages/Profile.tsx"));
-const PublishListing = lazy(() => import("./pages/PublishListing.tsx"));
-const ListingDetail = lazy(() => import("./pages/ListingDetail.tsx"));
-const ListingsPage = lazy(() => import("./pages/ListingsPage.tsx"));
-const Admin = lazy(() => import("./pages/Admin.tsx"));
-const AdminLogin = lazy(() => import("./pages/AdminLogin.tsx"));
-const ResetPassword = lazy(() => import("./pages/ResetPassword.tsx"));
-const Cart = lazy(() => import("./pages/Cart.tsx"));
-const OrderConfirmation = lazy(() => import("./pages/OrderConfirmation.tsx"));
-const NotFound = lazy(() => import("./pages/NotFound.tsx"));
-const Installer = lazy(() => import("./pages/Installer.tsx"));
-const ModerationCase = lazy(() => import("./pages/ModerationCase.tsx"));
+// Retry dynamic imports once and force-reload on stale chunks (after deploys)
+function lazyWithRetry<T extends React.ComponentType<any>>(
+  factory: () => Promise<{ default: T }>,
+) {
+  return lazy(async () => {
+    const KEY = "lovable:chunk-reloaded";
+    try {
+      return await factory();
+    } catch (err) {
+      const msg = String((err as Error)?.message || err);
+      const isChunkError =
+        /dynamically imported module|Failed to fetch dynamically imported module|Importing a module script failed|ChunkLoadError/i.test(
+          msg,
+        );
+      if (isChunkError && typeof window !== "undefined") {
+        if (!sessionStorage.getItem(KEY)) {
+          sessionStorage.setItem(KEY, "1");
+          window.location.reload();
+          return new Promise<{ default: T }>(() => {});
+        }
+      }
+      throw err;
+    }
+  });
+}
+
+const Dashboard = lazyWithRetry(() => import("./pages/Dashboard.tsx"));
+const Profile = lazyWithRetry(() => import("./pages/Profile.tsx"));
+const PublishListing = lazyWithRetry(() => import("./pages/PublishListing.tsx"));
+const ListingDetail = lazyWithRetry(() => import("./pages/ListingDetail.tsx"));
+const ListingsPage = lazyWithRetry(() => import("./pages/ListingsPage.tsx"));
+const Admin = lazyWithRetry(() => import("./pages/Admin.tsx"));
+const AdminLogin = lazyWithRetry(() => import("./pages/AdminLogin.tsx"));
+const ResetPassword = lazyWithRetry(() => import("./pages/ResetPassword.tsx"));
+const Cart = lazyWithRetry(() => import("./pages/Cart.tsx"));
+const OrderConfirmation = lazyWithRetry(() => import("./pages/OrderConfirmation.tsx"));
+const NotFound = lazyWithRetry(() => import("./pages/NotFound.tsx"));
+const Installer = lazyWithRetry(() => import("./pages/Installer.tsx"));
+const ModerationCase = lazyWithRetry(() => import("./pages/ModerationCase.tsx"));
 
 const queryClient = new QueryClient();
 
