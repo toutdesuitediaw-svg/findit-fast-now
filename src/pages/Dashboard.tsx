@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Heart, Loader2, LogOut, Plus, Trash2, Flag, MessageSquare } from "lucide-react";
+import { Heart, Loader2, LogOut, Plus, Trash2, Flag, MessageSquare, Pencil } from "lucide-react";
 import MessagesTab from "@/components/MessagesTab";
+import EditListingDialog from "@/components/EditListingDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
