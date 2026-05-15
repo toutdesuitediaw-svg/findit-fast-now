@@ -705,14 +705,33 @@ const PublishListing = () => {
                       Couverture
                     </span>
                   )}
-                  <button
-                    type="button"
-                    onClick={() => removeFile(p.id)}
-                    aria-label={`Supprimer la photo ${i + 1}`}
-                    className="absolute top-1 right-1 w-7 h-7 rounded-full bg-background/95 shadow-sm border border-border flex items-center justify-center hover:bg-destructive hover:text-destructive-foreground hover:border-destructive transition-colors"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  <div className="absolute top-1 right-1 flex items-center gap-1">
+                    <label
+                      aria-label={`Modifier la photo ${i + 1}`}
+                      title="Modifier la photo"
+                      className="w-7 h-7 rounded-full bg-background/95 shadow-sm border border-border flex items-center justify-center hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors cursor-pointer"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) replaceFile(p.id, f);
+                          e.target.value = "";
+                        }}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => removeFile(p.id)}
+                      aria-label={`Supprimer la photo ${i + 1}`}
+                      className="w-7 h-7 rounded-full bg-background/95 shadow-sm border border-border flex items-center justify-center hover:bg-destructive hover:text-destructive-foreground hover:border-destructive transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
               ))}
               {photos.length < MAX_GALLERY_IMAGES && (
