@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
-import { AlertCircle, Check, ImagePlus, Loader2, RotateCw, Sparkles, Star, Trash2, TriangleAlert, X, Zap } from "lucide-react";
+import { AlertCircle, Check, ImagePlus, Loader2, Pencil, RotateCw, Sparkles, Star, Trash2, TriangleAlert, X, Zap } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -338,6 +338,24 @@ const PublishListing = () => {
   const retryUpload = (id: string) => {
     const item = photos.find((p) => p.id === id);
     if (item) void uploadPhoto(id, item.file);
+  };
+
+  const replaceFile = (id: string, file: File) => {
+    if (file.size > 5 * 1024 * 1024 || !file.type.startsWith("image/")) {
+      toast.error("Image invalide (max 5MB, images uniquement)");
+      return;
+    }
+    // Cancel any in-flight upload for this slot
+    cancelledRef.current.add(id);
+    const newPreview = URL.createObjectURL(file);
+    setPhotos((prev) =>
+      prev.map((p) => {
+        if (p.id !== id) return p;
+        if (p.preview.startsWith("blob:")) URL.revokeObjectURL(p.preview);
+        return { ...p, file, preview: newPreview, status: "pending", error: undefined, url: undefined };
+      }),
+    );
+    void uploadPhoto(id, file);
   };
 
   const clearAllFiles = () => {
@@ -687,14 +705,33 @@ const PublishListing = () => {
                       Couverture
                     </span>
                   )}
-                  <button
-                    type="button"
-                    onClick={() => removeFile(p.id)}
-                    aria-label={`Supprimer la photo ${i + 1}`}
-                    className="absolute top-1 right-1 w-7 h-7 rounded-full bg-background/95 shadow-sm border border-border flex items-center justify-center hover:bg-destructive hover:text-destructive-foreground hover:border-destructive transition-colors"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  <div className="absolute top-1 right-1 flex items-center gap-1">
+                    <label
+                      aria-label={`Modifier la photo ${i + 1}`}
+                      title="Modifier la photo"
+                      className="w-7 h-7 rounded-full bg-background/95 shadow-sm border border-border flex items-center justify-center hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors cursor-pointer"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) replaceFile(p.id, f);
+                          e.target.value = "";
+                        }}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => removeFile(p.id)}
+                      aria-label={`Supprimer la photo ${i + 1}`}
+                      className="w-7 h-7 rounded-full bg-background/95 shadow-sm border border-border flex items-center justify-center hover:bg-destructive hover:text-destructive-foreground hover:border-destructive transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
               ))}
               {photos.length < MAX_GALLERY_IMAGES && (
