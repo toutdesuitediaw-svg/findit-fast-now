@@ -101,7 +101,7 @@ const ListingCard = ({ listing }: { listing: ListingCardData }) => {
         </button>
         <button
           aria-label="Signaler"
-          onClick={(e) => { e.stopPropagation(); setReportOpen(true); }}
+          onClick={(e) => { e.stopPropagation(); if (!requireAuth({ title: "Signaler une annonce", message: "Connectez-vous pour signaler cette annonce." })) return; setReportOpen(true); }}
           className="absolute top-3 right-14 w-9 h-9 rounded-full bg-background/80 backdrop-blur flex items-center justify-center border border-border hover:bg-destructive/20 hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
         >
           <Flag className="w-4 h-4" />
