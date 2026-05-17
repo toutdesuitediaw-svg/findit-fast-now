@@ -3,7 +3,7 @@ import { Flag, Heart } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { toast } from "sonner";
+import { useAuthPrompt } from "@/components/AuthPromptDialog";
 import ReportListingDialog from "@/components/ReportListingDialog";
 import { formatPublished, getExpiry, isNew } from "@/lib/listingDate";
 
@@ -22,6 +22,7 @@ export interface ListingCardData {
 const ListingCard = ({ listing }: { listing: ListingCardData }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { requireAuth } = useAuthPrompt();
   const [isFav, setIsFav] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
 
@@ -38,11 +39,8 @@ const ListingCard = ({ listing }: { listing: ListingCardData }) => {
 
   const toggleFav = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!user) {
-      toast.info("Connectez-vous pour ajouter aux favoris");
-      navigate("/auth");
-      return;
-    }
+    if (!requireAuth({ title: "Ajouter aux favoris", message: "Connectez-vous pour sauvegarder vos annonces préférées." })) return;
+    if (!user) return;
     if (isFav) {
       await supabase.from("favorites").delete().eq("user_id", user.id).eq("listing_id", listing.id);
       setIsFav(false);
@@ -102,7 +100,7 @@ const ListingCard = ({ listing }: { listing: ListingCardData }) => {
         </button>
         <button
           aria-label="Signaler"
-          onClick={(e) => { e.stopPropagation(); setReportOpen(true); }}
+          onClick={(e) => { e.stopPropagation(); if (!requireAuth({ title: "Signaler une annonce", message: "Connectez-vous pour signaler cette annonce." })) return; setReportOpen(true); }}
           className="absolute top-3 right-14 w-9 h-9 rounded-full bg-background/80 backdrop-blur flex items-center justify-center border border-border hover:bg-destructive/20 hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
         >
           <Flag className="w-4 h-4" />

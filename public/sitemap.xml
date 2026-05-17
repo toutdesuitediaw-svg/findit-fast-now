@@ -11,13 +11,53 @@
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://www.toutsuitannonce.com/publier</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
+    <loc>https://www.toutsuitannonce.com/annonces?sort=premium</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
   </url>
   <url>
     <loc>https://www.toutsuitannonce.com/auth</loc>
     <changefreq>monthly</changefreq>
-    <priority>0.4</priority>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://www.toutsuitannonce.com/annonces?category=immobilier</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.toutsuitannonce.com/annonces?category=vehicules</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.toutsuitannonce.com/annonces?category=electronique</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.toutsuitannonce.com/annonces?category=emploi</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.toutsuitannonce.com/annonces?category=mode-beaute</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.toutsuitannonce.com/annonces?category=divers</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.toutsuitannonce.com/annonces?category=Materiels%20Informatique</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.toutsuitannonce.com/annonces?category=Telephone</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
   </url>
 </urlset>

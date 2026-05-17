@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useCart } from "@/hooks/useCart";
+import { useAuthPrompt } from "@/components/AuthPromptDialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 const navItems = [
@@ -21,6 +22,12 @@ const Header = () => {
   const { user, signOut } = useAuth();
   const { isAdmin } = useAdmin();
   const { count } = useCart();
+  const { requireAuth } = useAuthPrompt();
+
+  const goPublish = () => {
+    if (!requireAuth({ title: "Publier une annonce", message: "Connectez-vous pour publier votre annonce gratuitement." })) return;
+    navigate("/publier");
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -123,7 +130,7 @@ const Header = () => {
               ) : (
                 <>
                   <Button variant="outlineGold" onClick={() => { navigate("/auth"); setOpen(false); }}>Se connecter</Button>
-                  <Button variant="gold" onClick={() => { navigate("/auth"); setOpen(false); }}>Publier une annonce</Button>
+                  <Button variant="gold" onClick={() => { setOpen(false); goPublish(); }}>Publier une annonce</Button>
                 </>
               )}
             </div>
