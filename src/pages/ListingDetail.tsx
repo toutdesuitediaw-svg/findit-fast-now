@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Flag, Heart, Loader2, MapPin, MessageCircle, Phone, ShoppingCart } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useAuthPrompt } from "@/components/AuthPromptDialog";
 import { useCart } from "@/hooks/useCart";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -45,6 +46,7 @@ const ListingDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { requireAuth } = useAuthPrompt();
   const { addItem } = useCart();
   const [listing, setListing] = useState<ListingDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -125,11 +127,8 @@ const ListingDetail = () => {
   }, [id, user, navigate]);
 
   const toggleFav = async () => {
-    if (!user) {
-      toast.info("Connectez-vous pour ajouter aux favoris");
-      navigate("/auth");
-      return;
-    }
+    if (!requireAuth({ title: "Ajouter aux favoris", message: "Connectez-vous pour sauvegarder cette annonce." })) return;
+    if (!user) return;
     if (!listing) return;
     if (isFav) {
       await supabase.from("favorites").delete().eq("user_id", user.id).eq("listing_id", listing.id);
@@ -142,7 +141,8 @@ const ListingDetail = () => {
   };
 
   const submitReport = async () => {
-    if (!user) { toast.info("Connectez-vous pour signaler"); navigate("/auth"); return; }
+    if (!requireAuth({ title: "Signaler", message: "Connectez-vous pour signaler cette annonce." })) return;
+    if (!user) return;
     if (!listing || !reportReason.trim()) return;
     setSubmittingReport(true);
     const { error } = await supabase.from("reports").insert({
@@ -162,6 +162,7 @@ const ListingDetail = () => {
 
   const handleOrder = () => {
     if (!listing) return;
+    if (!requireAuth({ title: "Commander", message: "Connectez-vous pour commander cet article." })) return;
     addItem({
       id: listing.id,
       title: listing.title,
