@@ -3,6 +3,7 @@ import { Flag, Heart } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useAuthPrompt } from "@/components/AuthPromptDialog";
 import { toast } from "sonner";
 import ReportListingDialog from "@/components/ReportListingDialog";
 import { formatPublished, getExpiry, isNew } from "@/lib/listingDate";
@@ -22,6 +23,7 @@ export interface ListingCardData {
 const ListingCard = ({ listing }: { listing: ListingCardData }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { requireAuth } = useAuthPrompt();
   const [isFav, setIsFav] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
 
@@ -38,11 +40,8 @@ const ListingCard = ({ listing }: { listing: ListingCardData }) => {
 
   const toggleFav = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!user) {
-      toast.info("Connectez-vous pour ajouter aux favoris");
-      navigate("/auth");
-      return;
-    }
+    if (!requireAuth({ title: "Ajouter aux favoris", message: "Connectez-vous pour sauvegarder vos annonces préférées." })) return;
+    if (!user) return;
     if (isFav) {
       await supabase.from("favorites").delete().eq("user_id", user.id).eq("listing_id", listing.id);
       setIsFav(false);
