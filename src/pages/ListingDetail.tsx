@@ -324,15 +324,25 @@ const ListingDetail = () => {
 
               {waNumber ? (
                 <>
-                  <Button variant="gold" className="w-full" asChild>
-                    <a href={`https://wa.me/${waNumber}?text=${waMsg}`} target="_blank" rel="noopener noreferrer">
-                      <MessageCircle className="w-4 h-4" /> Contacter sur WhatsApp
-                    </a>
+                  <Button
+                    variant="gold"
+                    className="w-full"
+                    onClick={() => {
+                      if (!requireAuth({ title: "Contacter le vendeur", message: "Connectez-vous pour voir le numéro et contacter le vendeur." })) return;
+                      window.open(`https://wa.me/${waNumber}?text=${waMsg}`, "_blank", "noopener,noreferrer");
+                    }}
+                  >
+                    <MessageCircle className="w-4 h-4" /> Contacter sur WhatsApp
                   </Button>
-                  <Button variant="outlineGold" className="w-full" asChild>
-                    <a href={`tel:${waNumber}`}>
-                      <Phone className="w-4 h-4" /> Appeler
-                    </a>
+                  <Button
+                    variant="outlineGold"
+                    className="w-full"
+                    onClick={() => {
+                      if (!requireAuth({ title: "Appeler le vendeur", message: "Connectez-vous pour voir le numéro et appeler." })) return;
+                      window.location.href = `tel:${waNumber}`;
+                    }}
+                  >
+                    <Phone className="w-4 h-4" /> {user ? "Appeler" : "Voir le numéro"}
                   </Button>
                 </>
               ) : (
