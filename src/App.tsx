@@ -6,6 +6,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
+import { AuthPromptProvider } from "@/components/AuthPromptDialog";
 import Index from "./pages/Index.tsx";
 import RequireAuth from "./components/RequireAuth.tsx";
 import IOSInstallHint from "./components/IOSInstallHint.tsx";
@@ -67,6 +68,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <AuthPromptProvider>
           <Suspense fallback={<Fallback />}>
             <Routes>
               <Route path="/" element={<Index />} />
@@ -88,6 +90,7 @@ const App = () => (
             </Routes>
           </Suspense>
           <IOSInstallHint />
+          </AuthPromptProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
