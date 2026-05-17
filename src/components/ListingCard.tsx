@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthPrompt } from "@/components/AuthPromptDialog";
-import { toast } from "sonner";
 import ReportListingDialog from "@/components/ReportListingDialog";
 import { formatPublished, getExpiry, isNew } from "@/lib/listingDate";
 
