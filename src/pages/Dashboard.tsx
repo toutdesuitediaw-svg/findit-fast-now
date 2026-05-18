@@ -297,6 +297,7 @@ const Dashboard = () => {
           setEditing(null);
         }}
       />
+      <BoostDialog open={!!boostingId} onOpenChange={(v) => { if (!v) setBoostingId(null); }} listingId={boostingId} />
       <Footer />
     </div>
   );
