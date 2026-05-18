@@ -295,24 +295,31 @@ const ListingDetail = () => {
                   </Button>
                 </div>
               )}
-              {user?.id === listing.user_id && (() => {
-                const exp = getExpiry(listing.expires_at);
-                if (exp.status === "fresh") return null;
-                return (
-                  <Button
-                    variant="gold"
-                    size="sm"
-                    className="w-full"
-                    onClick={async () => {
-                      const { data, error } = await supabase.functions.invoke("renew-listing", { body: { listing_id: listing.id } });
-                      if (error || (data as any)?.error) { toast.error((data as any)?.error || error?.message || "Erreur"); return; }
-                      toast.success("Annonce renouvelée pour 1 an");
-                    }}
-                  >
-                    <RefreshCw className="w-4 h-4" /> Renouveler l'annonce
+              {user?.id === listing.user_id && (
+                <div className="space-y-2">
+                  <Button variant="gold" size="sm" className="w-full" onClick={() => setBoostOpen(true)}>
+                    <Zap className="w-4 h-4" /> Booster cette annonce
                   </Button>
-                );
-              })()}
+                  {(() => {
+                    const exp = getExpiry(listing.expires_at);
+                    if (exp.status === "fresh") return null;
+                    return (
+                      <Button
+                        variant="outlineGold"
+                        size="sm"
+                        className="w-full"
+                        onClick={async () => {
+                          const { data, error } = await supabase.functions.invoke("renew-listing", { body: { listing_id: listing.id } });
+                          if (error || (data as any)?.error) { toast.error((data as any)?.error || error?.message || "Erreur"); return; }
+                          toast.success("Annonce renouvelée pour 1 an");
+                        }}
+                      >
+                        <RefreshCw className="w-4 h-4" /> Renouveler l'annonce
+                      </Button>
+                    );
+                  })()}
+                </div>
+              )}
             </div>
 
             <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
