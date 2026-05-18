@@ -5,7 +5,14 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import ListingCard, { ListingCardData } from "./ListingCard";
 
-const SELECT = "id, title, price, currency, location, images, is_premium";
+const SELECT = "id, title, price, currency, location, images, is_premium, is_urgent, profiles:user_id(is_verified, account_type)";
+
+const enrich = (rows: any[]): ListingCardData[] =>
+  rows.map((r) => ({
+    ...r,
+    seller_verified: r.profiles?.is_verified ?? false,
+    seller_pro: r.profiles?.account_type === "pro" || r.profiles?.account_type === "entreprise",
+  }));
 
 const sortListings = (arr: ListingCardData[]) =>
   [...arr].sort((a, b) => Number(b.is_premium) - Number(a.is_premium));
@@ -23,7 +30,7 @@ const Listings = () => {
       .order("is_premium", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(8);
-    setListings((data ?? []) as ListingCardData[]);
+    setListings(enrich(data ?? []));
     setLoading(false);
     initializedRef.current = true;
   };
@@ -41,9 +48,10 @@ const Listings = () => {
           if (!row.is_active) return;
           const { data } = await supabase.from("listings").select(SELECT).eq("id", row.id).maybeSingle();
           if (!data) return;
+          const [enriched] = enrich([data]);
           setListings((prev) => {
-            if (prev.some((p) => p.id === data.id)) return prev;
-            return sortListings([data as ListingCardData, ...prev]).slice(0, 8);
+            if (prev.some((p) => p.id === enriched.id)) return prev;
+            return sortListings([enriched, ...prev]).slice(0, 8);
           });
           if (initializedRef.current) {
             toast.success("Nouvelle annonce publiée", { description: row.title });
