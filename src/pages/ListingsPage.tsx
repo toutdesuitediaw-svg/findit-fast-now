@@ -105,7 +105,8 @@ const ListingsPage = () => {
 
     const fetchOne = async (id: string) => {
       const { data } = await supabase.from("listings").select(SELECT).eq("id", id).maybeSingle();
-      return data as any;
+      if (!data) return null;
+      return enrich([data])[0];
     };
 
     const channel = supabase
