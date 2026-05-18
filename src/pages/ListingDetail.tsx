@@ -394,6 +394,7 @@ const ListingDetail = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <BoostDialog open={boostOpen} onOpenChange={setBoostOpen} listingId={listing.id} />
     </div>
   );
 };
