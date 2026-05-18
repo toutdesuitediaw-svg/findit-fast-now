@@ -62,7 +62,8 @@ const ListingsPage = () => {
     let cancelled = false;
     initializedRef.current = false;
 
-    const SELECT = "id, title, price, currency, location, images, is_premium, category:categories(slug)";
+    const SELECT = "id, title, price, currency, location, images, is_premium, is_urgent, category:categories(slug), profiles:user_id(is_verified, account_type)";
+    const enrich = (rows: any[]): any[] => rows.map((r) => ({ ...r, seller_verified: r.profiles?.is_verified ?? false, seller_pro: r.profiles?.account_type === "professionnel" }));
 
     const applySort = (rows: any[]) => {
       if (sort === "price_asc") return [...rows].sort((a, b) => (a.price ?? Infinity) - (b.price ?? Infinity));
@@ -94,7 +95,7 @@ const ListingsPage = () => {
       if (cancelled) return;
       let rows = (data ?? []) as any[];
       if (cat !== "all") rows = rows.filter((r) => r.category?.slug === cat);
-      setListings(rows as ListingCardData[]);
+      setListings(enrich(rows) as ListingCardData[]);
       setLoading(false);
       initializedRef.current = true;
     };
