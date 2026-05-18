@@ -11,7 +11,7 @@ const enrich = (rows: any[]): ListingCardData[] =>
   rows.map((r) => ({
     ...r,
     seller_verified: r.profiles?.is_verified ?? false,
-    seller_pro: r.profiles?.account_type === "pro" || r.profiles?.account_type === "entreprise",
+    seller_pro: r.profiles?.account_type === "professionnel",
   }));
 
 const sortListings = (arr: ListingCardData[]) =>
@@ -78,6 +78,7 @@ const Listings = () => {
                       location: row.location,
                       images: row.images,
                       is_premium: row.is_premium,
+                      is_urgent: row.is_urgent,
                     }
                   : p
               )
