@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Heart, Loader2, LogOut, Plus, Trash2, Flag, MessageSquare, Pencil } from "lucide-react";
+import { Heart, Loader2, LogOut, Plus, Trash2, Flag, MessageSquare, Pencil, Zap } from "lucide-react";
 import MessagesTab from "@/components/MessagesTab";
 import EditListingDialog from "@/components/EditListingDialog";
+import BoostDialog from "@/components/BoostDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,7 @@ const Dashboard = () => {
   const [profile, setProfile] = useState<{ display_name: string | null } | null>(null);
   const [busy, setBusy] = useState(true);
   const [editing, setEditing] = useState<Listing | null>(null);
+  const [boostingId, setBoostingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !user) navigate("/auth", { replace: true });
@@ -211,7 +213,10 @@ const Dashboard = () => {
                           })}
                         </p>
                       )}
-                      <div className="flex items-center gap-1 pt-1">
+                      <div className="flex flex-wrap items-center gap-1 pt-1">
+                        <Button variant="gold" size="sm" onClick={() => setBoostingId(l.id)}>
+                          <Zap className="w-4 h-4" /> Booster
+                        </Button>
                         <Button variant="outlineGold" size="sm" onClick={() => setEditing(l)}>
                           <Pencil className="w-4 h-4" /> Modifier
                         </Button>
@@ -292,6 +297,7 @@ const Dashboard = () => {
           setEditing(null);
         }}
       />
+      <BoostDialog open={!!boostingId} onOpenChange={(v) => { if (!v) setBoostingId(null); }} listingId={boostingId} />
       <Footer />
     </div>
   );

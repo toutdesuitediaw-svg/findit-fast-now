@@ -17,7 +17,9 @@ import { toast } from "sonner";
 import { useSEO, SITE_URL } from "@/lib/seo";
 import { formatPublished, formatUpdated, getExpiry } from "@/lib/listingDate";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, AlertTriangle } from "lucide-react";
+import { RefreshCw, AlertTriangle, Zap } from "lucide-react";
+import ListingBadges from "@/components/ListingBadges";
+import BoostDialog from "@/components/BoostDialog";
 
 interface ListingDetail {
   id: string;
@@ -28,6 +30,8 @@ interface ListingDetail {
   location: string | null;
   images: string[];
   is_premium: boolean;
+  is_urgent: boolean;
+  urgent_until: string | null;
   premium_until: string | null;
   created_at: string;
   updated_at: string;
@@ -39,7 +43,7 @@ interface ListingDetail {
   trust_score: number | null;
   user_id: string;
   category: { name: string } | null;
-  seller: { display_name: string | null; phone: string | null; whatsapp: string | null; city: string | null } | null;
+  seller: { display_name: string | null; phone: string | null; whatsapp: string | null; city: string | null; is_verified: boolean | null; account_type: string | null } | null;
 }
 
 const ListingDetail = () => {
@@ -53,6 +57,7 @@ const ListingDetail = () => {
   const [activeImg, setActiveImg] = useState(0);
   const [isFav, setIsFav] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const [boostOpen, setBoostOpen] = useState(false);
   const [reportReason, setReportReason] = useState("");
   const [reportDetails, setReportDetails] = useState("");
   const [submittingReport, setSubmittingReport] = useState(false);
@@ -75,7 +80,7 @@ const ListingDetail = () => {
       }
       const { data: seller } = await supabase
         .from("profiles")
-        .select("display_name, phone, whatsapp, city")
+        .select("display_name, phone, whatsapp, city, is_verified, account_type")
         .eq("id", (data as any).user_id)
         .maybeSingle();
       if (cancelled) return;
@@ -222,16 +227,15 @@ const ListingDetail = () => {
               images={listing.images || []}
               alt={listing.title}
               badge={
-                listing.is_premium ? (
-                  <span className="bg-gradient-gold text-primary-foreground text-xs font-bold tracking-widest px-3 py-1.5 rounded inline-flex flex-col items-center leading-tight">
-                    <span>PREMIUM</span>
-                    {listing.premium_until && (
-                      <span className="text-[9px] font-medium tracking-normal opacity-90">
-                        jusqu'au {new Date(listing.premium_until).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })}
-                      </span>
-                    )}
-                  </span>
-                ) : null
+                <ListingBadges
+                  listing={{
+                    is_premium: listing.is_premium,
+                    is_urgent: listing.is_urgent,
+                    seller_verified: listing.seller?.is_verified ?? false,
+                    seller_pro: listing.seller?.account_type === "professionnel",
+                  }}
+                  size="md"
+                />
               }
               topRight={
                 <button
@@ -291,24 +295,31 @@ const ListingDetail = () => {
                   </Button>
                 </div>
               )}
-              {user?.id === listing.user_id && (() => {
-                const exp = getExpiry(listing.expires_at);
-                if (exp.status === "fresh") return null;
-                return (
-                  <Button
-                    variant="gold"
-                    size="sm"
-                    className="w-full"
-                    onClick={async () => {
-                      const { data, error } = await supabase.functions.invoke("renew-listing", { body: { listing_id: listing.id } });
-                      if (error || (data as any)?.error) { toast.error((data as any)?.error || error?.message || "Erreur"); return; }
-                      toast.success("Annonce renouvelée pour 1 an");
-                    }}
-                  >
-                    <RefreshCw className="w-4 h-4" /> Renouveler l'annonce
+              {user?.id === listing.user_id && (
+                <div className="space-y-2">
+                  <Button variant="gold" size="sm" className="w-full" onClick={() => setBoostOpen(true)}>
+                    <Zap className="w-4 h-4" /> Booster cette annonce
                   </Button>
-                );
-              })()}
+                  {(() => {
+                    const exp = getExpiry(listing.expires_at);
+                    if (exp.status === "fresh") return null;
+                    return (
+                      <Button
+                        variant="outlineGold"
+                        size="sm"
+                        className="w-full"
+                        onClick={async () => {
+                          const { data, error } = await supabase.functions.invoke("renew-listing", { body: { listing_id: listing.id } });
+                          if (error || (data as any)?.error) { toast.error((data as any)?.error || error?.message || "Erreur"); return; }
+                          toast.success("Annonce renouvelée pour 1 an");
+                        }}
+                      >
+                        <RefreshCw className="w-4 h-4" /> Renouveler l'annonce
+                      </Button>
+                    );
+                  })()}
+                </div>
+              )}
             </div>
 
             <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
@@ -383,6 +394,7 @@ const ListingDetail = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <BoostDialog open={boostOpen} onOpenChange={setBoostOpen} listingId={listing.id} />
     </div>
   );
 };

@@ -13,6 +13,7 @@ const navItems = [
   { label: "Accueil", to: "/" },
   { label: "Annonces", to: "/annonces" },
   { label: "Annonces Premium", to: "/annonces?sort=premium" },
+  { label: "Tarifs", to: "/tarifs" },
   { label: "Contact", to: "/#contact" },
 ];
 

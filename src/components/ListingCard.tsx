@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAuthPrompt } from "@/components/AuthPromptDialog";
 import ReportListingDialog from "@/components/ReportListingDialog";
 import { formatPublished, getExpiry, isNew } from "@/lib/listingDate";
+import ListingBadges from "@/components/ListingBadges";
 
 export interface ListingCardData {
   id: string;
@@ -15,6 +16,9 @@ export interface ListingCardData {
   location: string | null;
   images: string[];
   is_premium: boolean;
+  is_urgent?: boolean | null;
+  seller_verified?: boolean | null;
+  seller_pro?: boolean | null;
   published_at?: string | null;
   expires_at?: string | null;
 }
@@ -73,16 +77,14 @@ const ListingCard = ({ listing }: { listing: ListingCardData }) => {
         ) : (
           <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">Pas de photo</div>
         )}
-        {listing.is_premium && (
-          <span className="absolute top-3 left-3 bg-gradient-gold text-primary-foreground text-[10px] font-bold tracking-widest px-2.5 py-1 rounded">
-            PREMIUM
-          </span>
-        )}
-        {!listing.is_premium && isNew(listing.published_at) && (
-          <span className="absolute top-3 left-3 bg-emerald-500 text-white text-[10px] font-bold tracking-widest px-2.5 py-1 rounded">
-            NOUVEAU
-          </span>
-        )}
+        <div className="absolute top-3 left-3 max-w-[calc(100%-6rem)]">
+          <ListingBadges listing={listing} />
+          {!listing.is_premium && !listing.is_urgent && isNew(listing.published_at) && (
+            <span className="bg-emerald-500 text-white text-[10px] font-bold tracking-widest px-2.5 py-1 rounded inline-block">
+              NOUVEAU
+            </span>
+          )}
+        </div>
         {(() => {
           const exp = getExpiry(listing.expires_at);
           if (exp.status === "expired")

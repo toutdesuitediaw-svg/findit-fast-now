@@ -207,6 +207,7 @@ export type Database = {
           is_active: boolean
           is_featured: boolean
           is_premium: boolean
+          is_urgent: boolean
           last_renewed_at: string | null
           location: string | null
           moderation_status: Database["public"]["Enums"]["listing_status"]
@@ -220,6 +221,7 @@ export type Database = {
           title: string
           trust_score: number | null
           updated_at: string
+          urgent_until: string | null
           user_id: string
           views_count: number
         }
@@ -239,6 +241,7 @@ export type Database = {
           is_active?: boolean
           is_featured?: boolean
           is_premium?: boolean
+          is_urgent?: boolean
           last_renewed_at?: string | null
           location?: string | null
           moderation_status?: Database["public"]["Enums"]["listing_status"]
@@ -252,6 +255,7 @@ export type Database = {
           title: string
           trust_score?: number | null
           updated_at?: string
+          urgent_until?: string | null
           user_id: string
           views_count?: number
         }
@@ -271,6 +275,7 @@ export type Database = {
           is_active?: boolean
           is_featured?: boolean
           is_premium?: boolean
+          is_urgent?: boolean
           last_renewed_at?: string | null
           location?: string | null
           moderation_status?: Database["public"]["Enums"]["listing_status"]
@@ -284,6 +289,7 @@ export type Database = {
           title?: string
           trust_score?: number | null
           updated_at?: string
+          urgent_until?: string | null
           user_id?: string
           views_count?: number
         }
