@@ -9,6 +9,7 @@ import {
 import Header from "@/components/Header";
 import PwaAnalyticsTab from "@/components/admin/PwaAnalyticsTab";
 import ModerationAITab from "@/components/admin/ModerationAITab";
+import BoostsAdminTab from "@/components/admin/BoostsAdminTab";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -90,12 +91,14 @@ type ActivityLog = {
 type Transaction = {
   id: string;
   user_id: string;
+  listing_id: string | null;
   amount: number;
   currency: string;
   type: string;
   method: string | null;
   status: string;
   created_at: string;
+  metadata: Record<string, unknown> | null;
 };
 
 type Subscription = {
@@ -502,6 +505,7 @@ const Admin = () => {
             <TabsTrigger value="moderation"><AlertTriangle className="w-4 h-4 mr-1" />Modération</TabsTrigger>
             <TabsTrigger value="ai-moderation"><Sparkles className="w-4 h-4 mr-1" />Modération IA</TabsTrigger>
             <TabsTrigger value="payments"><CreditCard className="w-4 h-4 mr-1" />Paiements</TabsTrigger>
+            <TabsTrigger value="boosts"><Sparkles className="w-4 h-4 mr-1" />Boosts</TabsTrigger>
             <TabsTrigger value="categories"><FolderTree className="w-4 h-4 mr-1" />Catégories</TabsTrigger>
             <TabsTrigger value="analytics"><BarChart3 className="w-4 h-4 mr-1" />Analytics PWA</TabsTrigger>
             <TabsTrigger value="settings"><SettingsIcon className="w-4 h-4 mr-1" />Paramètres</TabsTrigger>
@@ -788,6 +792,26 @@ const Admin = () => {
               </div>
             </Card>
           </TabsContent>
+
+          {/* === BOOSTS === */}
+          <TabsContent value="boosts">
+            <BoostsAdminTab
+              transactions={transactions}
+              listings={listings}
+              emails={emails}
+              onUpdate={async (id, status) => {
+                const { error } = await supabase
+                  .from("transactions")
+                  .update({ status })
+                  .eq("id", id);
+                if (error) { toast.error(error.message); return; }
+                setTransactions((prev) => prev.map((t) => (t.id === id ? { ...t, status } : t)));
+                log(status === "completed" ? "boost_approved" : "boost_rejected", "transaction", id);
+                toast.success(status === "completed" ? "Boost approuvé" : "Boost refusé");
+              }}
+            />
+          </TabsContent>
+
 
           {/* === CATEGORIES === */}
           <TabsContent value="categories">

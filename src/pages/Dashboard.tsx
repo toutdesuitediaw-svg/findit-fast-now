@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Heart, Loader2, LogOut, Plus, Trash2, Flag, MessageSquare, Pencil, Zap } from "lucide-react";
+import { Heart, Loader2, LogOut, Plus, Trash2, Flag, MessageSquare, Pencil, Zap, BarChart3, Download, History } from "lucide-react";
 import MessagesTab from "@/components/MessagesTab";
 import EditListingDialog from "@/components/EditListingDialog";
 import BoostDialog from "@/components/BoostDialog";
@@ -9,6 +9,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { toast } from "sonner";
@@ -34,7 +36,21 @@ interface Listing {
   images: string[];
   is_active: boolean;
   is_premium: boolean;
+  is_urgent?: boolean | null;
+  views_count?: number | null;
   premium_until: string | null;
+  urgent_until?: string | null;
+  created_at?: string;
+}
+
+interface BoostTx {
+  id: string;
+  amount: number;
+  currency: string;
+  status: string;
+  created_at: string;
+  listing_id: string | null;
+  metadata: Record<string, unknown> | null;
 }
 
 const Dashboard = () => {
@@ -43,6 +59,7 @@ const Dashboard = () => {
   const [myListings, setMyListings] = useState<Listing[]>([]);
   const [favorites, setFavorites] = useState<Listing[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
+  const [boostHistory, setBoostHistory] = useState<BoostTx[]>([]);
   const [profile, setProfile] = useState<{ display_name: string | null } | null>(null);
   const [busy, setBusy] = useState(true);
   const [editing, setEditing] = useState<Listing | null>(null);
@@ -56,16 +73,18 @@ const Dashboard = () => {
     if (!user) return;
     const load = async () => {
       setBusy(true);
-      const [{ data: l }, { data: f }, { data: p }, { data: r }] = await Promise.all([
+      const [{ data: l }, { data: f }, { data: p }, { data: r }, { data: tx }] = await Promise.all([
         supabase.from("listings").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
         supabase.from("favorites").select("listing:listings(*)").eq("user_id", user.id),
         supabase.from("profiles").select("display_name").eq("id", user.id).maybeSingle(),
         supabase.from("reports").select("*").eq("reporter_id", user.id).order("created_at", { ascending: false }),
+        supabase.from("transactions").select("id, amount, currency, status, created_at, listing_id, metadata").eq("user_id", user.id).eq("type", "listing_boost").order("created_at", { ascending: false }),
       ]);
       setMyListings((l ?? []) as Listing[]);
       setFavorites(((f ?? []).map((x: any) => x.listing).filter(Boolean)) as Listing[]);
       setProfile(p);
       setReports((r ?? []) as Report[]);
+      setBoostHistory((tx ?? []) as BoostTx[]);
       setBusy(false);
     };
     load();
@@ -142,6 +161,32 @@ const Dashboard = () => {
   const formatPrice = (l: Listing) =>
     l.price ? `${Number(l.price).toLocaleString("fr-FR")} ${l.currency}` : "À discuter";
 
+  const stats = useMemo(() => {
+    const active = myListings.filter((l) => l.is_active).length;
+    const premium = myListings.filter((l) => l.is_premium).length;
+    const urgent = myListings.filter((l) => l.is_urgent).length;
+    const totalViews = myListings.reduce((s, l) => s + (l.views_count ?? 0), 0);
+    const totalSpent = boostHistory
+      .filter((t) => t.status === "completed")
+      .reduce((s, t) => s + Number(t.amount || 0), 0);
+    return { total: myListings.length, active, premium, urgent, totalViews, totalSpent };
+  }, [myListings, boostHistory]);
+
+  const exportListingsCSV = () => {
+    const headers = ["id", "titre", "prix", "devise", "lieu", "actif", "premium", "urgent", "vues", "created_at"];
+    const rows = myListings.map((l) => [
+      l.id, JSON.stringify(l.title), l.price ?? "", l.currency, JSON.stringify(l.location ?? ""),
+      l.is_active, l.is_premium, l.is_urgent ?? false, l.views_count ?? 0, l.created_at ?? "",
+    ].join(","));
+    const csv = [headers.join(","), ...rows].join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `mes-annonces-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+    toast.success("Export téléchargé");
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
@@ -166,13 +211,76 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <Tabs defaultValue="listings">
-          <TabsList>
+        <Tabs defaultValue="stats">
+          <TabsList className="flex flex-wrap h-auto">
+            <TabsTrigger value="stats"><BarChart3 className="w-4 h-4 mr-1" /> Statistiques</TabsTrigger>
             <TabsTrigger value="listings">Mes annonces ({myListings.length})</TabsTrigger>
+            <TabsTrigger value="boosts"><History className="w-4 h-4 mr-1" /> Boosts ({boostHistory.length})</TabsTrigger>
             <TabsTrigger value="messages"><MessageSquare className="w-4 h-4 mr-1" /> Messages</TabsTrigger>
             <TabsTrigger value="favorites">Favoris ({favorites.length})</TabsTrigger>
             <TabsTrigger value="reports">Signalements ({reports.length})</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="stats" className="mt-6 space-y-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+              <Card className="p-4"><div className="text-xs text-muted-foreground">Annonces</div><div className="text-2xl font-bold">{stats.total}</div></Card>
+              <Card className="p-4"><div className="text-xs text-muted-foreground">Actives</div><div className="text-2xl font-bold text-primary">{stats.active}</div></Card>
+              <Card className="p-4"><div className="text-xs text-muted-foreground">Premium</div><div className="text-2xl font-bold">{stats.premium}</div></Card>
+              <Card className="p-4"><div className="text-xs text-muted-foreground">Urgentes</div><div className="text-2xl font-bold">{stats.urgent}</div></Card>
+              <Card className="p-4"><div className="text-xs text-muted-foreground">Vues totales</div><div className="text-2xl font-bold">{stats.totalViews.toLocaleString("fr-FR")}</div></Card>
+              <Card className="p-4"><div className="text-xs text-muted-foreground">Dépensé boosts</div><div className="text-2xl font-bold">{stats.totalSpent.toLocaleString("fr-FR")} FCFA</div></Card>
+            </div>
+            <Card className="p-4 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="font-semibold">Exporter mes annonces</h3>
+                <p className="text-sm text-muted-foreground">Téléchargez la liste complète au format CSV.</p>
+              </div>
+              <Button variant="outlineGold" onClick={exportListingsCSV} disabled={myListings.length === 0}>
+                <Download className="w-4 h-4" /> Exporter en CSV
+              </Button>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="boosts" className="mt-6">
+            {boostHistory.length === 0 ? (
+              <EmptyState message="Aucun boost demandé" cta="Booster une annonce" onCta={() => navigate("/tarifs")} />
+            ) : (
+              <Card className="overflow-hidden">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Annonce</TableHead>
+                        <TableHead>Formule</TableHead>
+                        <TableHead>Montant</TableHead>
+                        <TableHead>Statut</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {boostHistory.map((t) => {
+                        const meta = (t.metadata ?? {}) as Record<string, string | number>;
+                        const listing = myListings.find((l) => l.id === t.listing_id);
+                        return (
+                          <TableRow key={t.id}>
+                            <TableCell className="text-xs whitespace-nowrap">{new Date(t.created_at).toLocaleString("fr-FR")}</TableCell>
+                            <TableCell className="max-w-[200px] truncate">{listing?.title ?? "—"}</TableCell>
+                            <TableCell><Badge variant="outline">{String(meta.plan_id ?? meta.boost_type ?? "—")}</Badge></TableCell>
+                            <TableCell className="font-medium whitespace-nowrap">{Number(t.amount).toLocaleString("fr-FR")} {t.currency}</TableCell>
+                            <TableCell>
+                              <Badge variant={t.status === "completed" ? "default" : t.status === "failed" ? "destructive" : "secondary"}>
+                                {t.status === "completed" ? "Activé" : t.status === "failed" ? "Refusé" : "En attente"}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              </Card>
+            )}
+          </TabsContent>
 
           <TabsContent value="messages" className="mt-6">
             <MessagesTab userId={user.id} />

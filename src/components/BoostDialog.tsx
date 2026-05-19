@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { trackEvent } from "@/lib/analytics";
 
 interface BoostPlan {
   id: string;
@@ -37,6 +38,7 @@ const BoostDialog = ({
 
   const submit = async (plan: BoostPlan) => {
     if (!user || !listingId) return;
+    trackEvent("boost_click", { plan_id: plan.id, boost_type: plan.type, value: plan.price });
     setSubmitting(plan.id);
     const { error } = await supabase.from("transactions").insert({
       user_id: user.id,
@@ -48,6 +50,14 @@ const BoostDialog = ({
       metadata: { boost_type: plan.type, duration_days: plan.duration, plan_id: plan.id },
     });
     setSubmitting(null);
+    if (!error) {
+      trackEvent("transaction_created", {
+        transaction_type: "listing_boost",
+        plan_id: plan.id,
+        value: plan.price,
+        currency: "FCFA",
+      });
+    }
     if (error) {
       toast.error("Impossible de créer la demande de boost");
       return;
