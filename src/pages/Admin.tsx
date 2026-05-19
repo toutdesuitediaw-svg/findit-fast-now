@@ -792,6 +792,26 @@ const Admin = () => {
             </Card>
           </TabsContent>
 
+          {/* === BOOSTS === */}
+          <TabsContent value="boosts">
+            <BoostsAdminTab
+              transactions={transactions}
+              listings={listings}
+              emails={emails}
+              onUpdate={async (id, status) => {
+                const { error } = await supabase
+                  .from("transactions")
+                  .update({ status })
+                  .eq("id", id);
+                if (error) { toast.error(error.message); return; }
+                setTransactions((prev) => prev.map((t) => (t.id === id ? { ...t, status } : t)));
+                log(status === "completed" ? "boost_approved" : "boost_rejected", "transaction", id);
+                toast.success(status === "completed" ? "Boost approuvé" : "Boost refusé");
+              }}
+            />
+          </TabsContent>
+
+
           {/* === CATEGORIES === */}
           <TabsContent value="categories">
             <div className="flex justify-end mb-4">
