@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import heroBg from "@/assets/hero-bg.jpg";
 import Logo from "./Logo";
+import { trackEvent } from "@/lib/analytics";
 
 const Hero = () => {
   const navigate = useNavigate();
@@ -12,6 +13,7 @@ const Hero = () => {
   const onSearch = () => {
     const params = new URLSearchParams();
     if (q.trim()) params.set("q", q.trim());
+    trackEvent("search", { search_term: q.trim(), source: "hero" });
     navigate(`/annonces?${params.toString()}`);
   };
   return (

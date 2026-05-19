@@ -60,7 +60,16 @@ const ListingCard = ({ listing }: { listing: ListingCardData }) => {
 
   return (
     <article
-      onClick={() => navigate(`/annonce/${listing.id}`)}
+      onClick={() => {
+        import("@/lib/analytics").then(({ trackEvent }) =>
+          trackEvent("listing_click", {
+            listing_id: listing.id,
+            is_premium: !!listing.is_premium,
+            is_urgent: !!listing.is_urgent,
+          }),
+        );
+        navigate(`/annonce/${listing.id}`);
+      }}
       className="group relative rounded-2xl overflow-hidden bg-card border border-border/50 hover:border-primary/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-gold cursor-pointer"
     >
       <div className="relative aspect-[4/3] overflow-hidden bg-secondary">
