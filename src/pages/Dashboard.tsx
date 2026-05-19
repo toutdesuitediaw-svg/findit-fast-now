@@ -161,6 +161,32 @@ const Dashboard = () => {
   const formatPrice = (l: Listing) =>
     l.price ? `${Number(l.price).toLocaleString("fr-FR")} ${l.currency}` : "À discuter";
 
+  const stats = useMemo(() => {
+    const active = myListings.filter((l) => l.is_active).length;
+    const premium = myListings.filter((l) => l.is_premium).length;
+    const urgent = myListings.filter((l) => l.is_urgent).length;
+    const totalViews = myListings.reduce((s, l) => s + (l.views_count ?? 0), 0);
+    const totalSpent = boostHistory
+      .filter((t) => t.status === "completed")
+      .reduce((s, t) => s + Number(t.amount || 0), 0);
+    return { total: myListings.length, active, premium, urgent, totalViews, totalSpent };
+  }, [myListings, boostHistory]);
+
+  const exportListingsCSV = () => {
+    const headers = ["id", "titre", "prix", "devise", "lieu", "actif", "premium", "urgent", "vues", "created_at"];
+    const rows = myListings.map((l) => [
+      l.id, JSON.stringify(l.title), l.price ?? "", l.currency, JSON.stringify(l.location ?? ""),
+      l.is_active, l.is_premium, l.is_urgent ?? false, l.views_count ?? 0, l.created_at ?? "",
+    ].join(","));
+    const csv = [headers.join(","), ...rows].join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `mes-annonces-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+    toast.success("Export téléchargé");
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
@@ -185,13 +211,76 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <Tabs defaultValue="listings">
-          <TabsList>
+        <Tabs defaultValue="stats">
+          <TabsList className="flex flex-wrap h-auto">
+            <TabsTrigger value="stats"><BarChart3 className="w-4 h-4 mr-1" /> Statistiques</TabsTrigger>
             <TabsTrigger value="listings">Mes annonces ({myListings.length})</TabsTrigger>
+            <TabsTrigger value="boosts"><History className="w-4 h-4 mr-1" /> Boosts ({boostHistory.length})</TabsTrigger>
             <TabsTrigger value="messages"><MessageSquare className="w-4 h-4 mr-1" /> Messages</TabsTrigger>
             <TabsTrigger value="favorites">Favoris ({favorites.length})</TabsTrigger>
             <TabsTrigger value="reports">Signalements ({reports.length})</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="stats" className="mt-6 space-y-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+              <Card className="p-4"><div className="text-xs text-muted-foreground">Annonces</div><div className="text-2xl font-bold">{stats.total}</div></Card>
+              <Card className="p-4"><div className="text-xs text-muted-foreground">Actives</div><div className="text-2xl font-bold text-primary">{stats.active}</div></Card>
+              <Card className="p-4"><div className="text-xs text-muted-foreground">Premium</div><div className="text-2xl font-bold">{stats.premium}</div></Card>
+              <Card className="p-4"><div className="text-xs text-muted-foreground">Urgentes</div><div className="text-2xl font-bold">{stats.urgent}</div></Card>
+              <Card className="p-4"><div className="text-xs text-muted-foreground">Vues totales</div><div className="text-2xl font-bold">{stats.totalViews.toLocaleString("fr-FR")}</div></Card>
+              <Card className="p-4"><div className="text-xs text-muted-foreground">Dépensé boosts</div><div className="text-2xl font-bold">{stats.totalSpent.toLocaleString("fr-FR")} FCFA</div></Card>
+            </div>
+            <Card className="p-4 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="font-semibold">Exporter mes annonces</h3>
+                <p className="text-sm text-muted-foreground">Téléchargez la liste complète au format CSV.</p>
+              </div>
+              <Button variant="outlineGold" onClick={exportListingsCSV} disabled={myListings.length === 0}>
+                <Download className="w-4 h-4" /> Exporter en CSV
+              </Button>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="boosts" className="mt-6">
+            {boostHistory.length === 0 ? (
+              <EmptyState message="Aucun boost demandé" cta="Booster une annonce" onCta={() => navigate("/tarifs")} />
+            ) : (
+              <Card className="overflow-hidden">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Annonce</TableHead>
+                        <TableHead>Formule</TableHead>
+                        <TableHead>Montant</TableHead>
+                        <TableHead>Statut</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {boostHistory.map((t) => {
+                        const meta = (t.metadata ?? {}) as Record<string, string | number>;
+                        const listing = myListings.find((l) => l.id === t.listing_id);
+                        return (
+                          <TableRow key={t.id}>
+                            <TableCell className="text-xs whitespace-nowrap">{new Date(t.created_at).toLocaleString("fr-FR")}</TableCell>
+                            <TableCell className="max-w-[200px] truncate">{listing?.title ?? "—"}</TableCell>
+                            <TableCell><Badge variant="outline">{String(meta.plan_id ?? meta.boost_type ?? "—")}</Badge></TableCell>
+                            <TableCell className="font-medium whitespace-nowrap">{Number(t.amount).toLocaleString("fr-FR")} {t.currency}</TableCell>
+                            <TableCell>
+                              <Badge variant={t.status === "completed" ? "default" : t.status === "failed" ? "destructive" : "secondary"}>
+                                {t.status === "completed" ? "Activé" : t.status === "failed" ? "Refusé" : "En attente"}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              </Card>
+            )}
+          </TabsContent>
 
           <TabsContent value="messages" className="mt-6">
             <MessagesTab userId={user.id} />
