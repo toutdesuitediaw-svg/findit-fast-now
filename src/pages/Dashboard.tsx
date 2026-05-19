@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Heart, Loader2, LogOut, Plus, Trash2, Flag, MessageSquare, Pencil, Zap } from "lucide-react";
+import { Heart, Loader2, LogOut, Plus, Trash2, Flag, MessageSquare, Pencil, Zap, BarChart3, Download, History } from "lucide-react";
 import MessagesTab from "@/components/MessagesTab";
 import EditListingDialog from "@/components/EditListingDialog";
 import BoostDialog from "@/components/BoostDialog";
@@ -9,6 +9,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { toast } from "sonner";
@@ -34,7 +36,21 @@ interface Listing {
   images: string[];
   is_active: boolean;
   is_premium: boolean;
+  is_urgent?: boolean | null;
+  views_count?: number | null;
   premium_until: string | null;
+  urgent_until?: string | null;
+  created_at?: string;
+}
+
+interface BoostTx {
+  id: string;
+  amount: number;
+  currency: string;
+  status: string;
+  created_at: string;
+  listing_id: string | null;
+  metadata: Record<string, unknown> | null;
 }
 
 const Dashboard = () => {
