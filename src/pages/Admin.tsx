@@ -9,6 +9,7 @@ import {
 import Header from "@/components/Header";
 import PwaAnalyticsTab from "@/components/admin/PwaAnalyticsTab";
 import ModerationAITab from "@/components/admin/ModerationAITab";
+import BoostsAdminTab from "@/components/admin/BoostsAdminTab";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
