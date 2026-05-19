@@ -90,12 +90,14 @@ type ActivityLog = {
 type Transaction = {
   id: string;
   user_id: string;
+  listing_id: string | null;
   amount: number;
   currency: string;
   type: string;
   method: string | null;
   status: string;
   created_at: string;
+  metadata: Record<string, unknown> | null;
 };
 
 type Subscription = {
