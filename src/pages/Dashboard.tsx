@@ -59,6 +59,7 @@ const Dashboard = () => {
   const [myListings, setMyListings] = useState<Listing[]>([]);
   const [favorites, setFavorites] = useState<Listing[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
+  const [boostHistory, setBoostHistory] = useState<BoostTx[]>([]);
   const [profile, setProfile] = useState<{ display_name: string | null } | null>(null);
   const [busy, setBusy] = useState(true);
   const [editing, setEditing] = useState<Listing | null>(null);
@@ -72,16 +73,18 @@ const Dashboard = () => {
     if (!user) return;
     const load = async () => {
       setBusy(true);
-      const [{ data: l }, { data: f }, { data: p }, { data: r }] = await Promise.all([
+      const [{ data: l }, { data: f }, { data: p }, { data: r }, { data: tx }] = await Promise.all([
         supabase.from("listings").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
         supabase.from("favorites").select("listing:listings(*)").eq("user_id", user.id),
         supabase.from("profiles").select("display_name").eq("id", user.id).maybeSingle(),
         supabase.from("reports").select("*").eq("reporter_id", user.id).order("created_at", { ascending: false }),
+        supabase.from("transactions").select("id, amount, currency, status, created_at, listing_id, metadata").eq("user_id", user.id).eq("type", "listing_boost").order("created_at", { ascending: false }),
       ]);
       setMyListings((l ?? []) as Listing[]);
       setFavorites(((f ?? []).map((x: any) => x.listing).filter(Boolean)) as Listing[]);
       setProfile(p);
       setReports((r ?? []) as Report[]);
+      setBoostHistory((tx ?? []) as BoostTx[]);
       setBusy(false);
     };
     load();
