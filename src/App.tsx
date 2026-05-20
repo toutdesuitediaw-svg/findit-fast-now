@@ -89,6 +89,7 @@ const App = () => (
               <Route path="/installer" element={<Installer />} />
               <Route path="/moderation/:caseId" element={<RequireAuth><ModerationCase /></RequireAuth>} />
               <Route path="/tarifs" element={<Pricing />} />
+              <Route path="/notifications" element={<RequireAuth><NotificationsCenter /></RequireAuth>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
