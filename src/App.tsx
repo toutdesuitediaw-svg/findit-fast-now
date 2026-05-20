@@ -53,6 +53,7 @@ const NotFound = lazyWithRetry(() => import("./pages/NotFound.tsx"));
 const Installer = lazyWithRetry(() => import("./pages/Installer.tsx"));
 const ModerationCase = lazyWithRetry(() => import("./pages/ModerationCase.tsx"));
 const Pricing = lazyWithRetry(() => import("./pages/Pricing.tsx"));
+const NotificationsCenter = lazyWithRetry(() => import("./pages/NotificationsCenter.tsx"));
 
 const queryClient = new QueryClient();
 
