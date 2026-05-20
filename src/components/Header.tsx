@@ -8,6 +8,7 @@ import { useAdmin } from "@/hooks/useAdmin";
 import { useCart } from "@/hooks/useCart";
 import { useAuthPrompt } from "@/components/AuthPromptDialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import NotificationsBell from "./NotificationsBell";
 
 const navItems = [
   { label: "Accueil", to: "/" },
@@ -53,6 +54,7 @@ const Header = () => {
         </nav>
 
         <div className="hidden md:flex items-center gap-3">
+          {user && <NotificationsBell />}
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
