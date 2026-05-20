@@ -515,6 +515,39 @@ export type Database = {
           },
         ]
       }
+      notification_preferences: {
+        Row: {
+          categories: string[]
+          city: string | null
+          created_at: string
+          enabled: boolean
+          premium_only: boolean
+          sound_enabled: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          categories?: string[]
+          city?: string | null
+          created_at?: string
+          enabled?: boolean
+          premium_only?: boolean
+          sound_enabled?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          categories?: string[]
+          city?: string | null
+          created_at?: string
+          enabled?: boolean
+          premium_only?: boolean
+          sound_enabled?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           body: string | null
