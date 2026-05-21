@@ -66,10 +66,10 @@
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://www.toutsuitannonce.com/annonce/d0e1808a-627d-4507-9442-917b698ccd7c</loc>
-    <lastmod>2026-05-14T12:18:00.978Z</lastmod>
+    <loc>https://www.toutsuitannonce.com/annonce/7528a40c-3591-4542-b71f-27085a0fd3ab</loc>
+    <lastmod>2026-05-20T10:44:36.718Z</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.8</priority>
   </url>
   <url>
     <loc>https://www.toutsuitannonce.com/annonce/dc0337d8-1829-49da-8a3d-788d7419b9be</loc>
@@ -96,7 +96,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://www.toutsuitannonce.com/annonce/edd2e38a-f8c9-483b-9382-e9c3066327c8</loc>
+    <loc>https://www.toutsuitannonce.com/annonce/d0e1808a-627d-4507-9442-917b698ccd7c</loc>
     <lastmod>2026-05-14T12:18:00.978Z</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -124,5 +124,11 @@
     <lastmod>2026-05-19T11:30:37.125Z</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.toutsuitannonce.com/annonce/edd2e38a-f8c9-483b-9382-e9c3066327c8</loc>
+    <lastmod>2026-05-14T12:18:00.978Z</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
   </url>
 </urlset>
