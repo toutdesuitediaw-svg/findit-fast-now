@@ -371,6 +371,7 @@ const ListingDetail = () => {
             </div>
           </aside>
         </div>
+        <AIRecommendations mode="similar" listingId={listing.id} />
       </main>
       <Footer />
 
