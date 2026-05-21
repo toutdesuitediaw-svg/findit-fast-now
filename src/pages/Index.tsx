@@ -7,6 +7,8 @@ import Listings from "@/components/Listings";
 import PromoBanner from "@/components/PromoBanner";
 import TrustBar from "@/components/TrustBar";
 import WhatsAppBar from "@/components/WhatsAppBar";
+import AIRecommendations from "@/components/AIRecommendations";
+import { useAuth } from "@/hooks/useAuth";
 import { useSEO, SITE_URL, DEFAULT_IMAGE } from "@/lib/seo";
 
 const Index = () => {
