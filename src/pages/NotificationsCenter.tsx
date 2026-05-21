@@ -204,6 +204,8 @@ const NotificationsCenter = () => {
                 <div className="text-center py-6 text-muted-foreground">Chargement…</div>
               ) : (
                 <>
+                  <PushSubscriptionToggle />
+
                   <div className="flex items-center justify-between">
                     <div>
                       <Label className="text-base font-semibold">Activer les notifications</Label>
