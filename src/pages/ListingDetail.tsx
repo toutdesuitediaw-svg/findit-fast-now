@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { RefreshCw, AlertTriangle, Zap } from "lucide-react";
 import ListingBadges from "@/components/ListingBadges";
 import BoostDialog from "@/components/BoostDialog";
+import AIRecommendations from "@/components/AIRecommendations";
 
 interface ListingDetail {
   id: string;
