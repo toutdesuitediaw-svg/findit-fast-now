@@ -35,6 +35,7 @@ const Index = () => {
         <Hero />
         <Categories />
         <Listings />
+        <AIRecommendations mode="foryou" userId={user?.id} title="Recommandé pour vous" />
         <PromoBanner />
         <TrustBar />
       </main>
