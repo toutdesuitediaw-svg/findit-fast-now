@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { useSEO } from "@/lib/seo";
+import PushSubscriptionToggle from "@/components/PushSubscriptionToggle";
 
 interface Notification {
   id: string;
