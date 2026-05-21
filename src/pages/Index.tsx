@@ -12,6 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useSEO, SITE_URL, DEFAULT_IMAGE } from "@/lib/seo";
 
 const Index = () => {
+  const { user } = useAuth();
   useSEO({
     title: "TOUT DE SUITE — Petites annonces au Sénégal : Dakar, Thiès, Saint-Louis",
     description:
