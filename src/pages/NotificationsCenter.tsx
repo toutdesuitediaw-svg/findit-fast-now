@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { useSEO } from "@/lib/seo";
+import PushSubscriptionToggle from "@/components/PushSubscriptionToggle";
 
 interface Notification {
   id: string;
@@ -203,6 +204,8 @@ const NotificationsCenter = () => {
                 <div className="text-center py-6 text-muted-foreground">Chargement…</div>
               ) : (
                 <>
+                  <PushSubscriptionToggle />
+
                   <div className="flex items-center justify-between">
                     <div>
                       <Label className="text-base font-semibold">Activer les notifications</Label>
